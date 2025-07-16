@@ -31,4 +31,5 @@ if menu == "Status das Câmeras":
 
     total_cameras = dados_filtrados.shape[0]
     online_count = dados_filtrados[dados_filtrados["Status"] == "Online"].shape[0]
-    offline_count = dados_filtrados[dados_filtr_]()
+    offline_count = dados_filtrados[dados_filtrados["Status"] == "Offline"].shape[0]
+
