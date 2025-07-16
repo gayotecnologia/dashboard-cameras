@@ -2,51 +2,56 @@ import streamlit as st
 import pandas as pd
 from login import check_login
 
-# Autenticação
+# Verifica login
 if not check_login():
     st.stop()
 
-# Título
-st.title("📹 Dashboard de Status das Câmeras")
+# Título do dashboard
+st.title("📹 Dashboard de Câmeras - Digifort")
 
-# Leitura segura do CSV com diagnóstico
+# Carrega os dados diretamente do arquivo no repositório
+CSV_PATH = "status_cameras.csv"
+
 try:
-    df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
-
-    colunas_esperadas = [
-        "Nome", "Em Funcionamento", "Endereço", "Descrição",
-        "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado"
-    ]
-    if not all(col in df.columns for col in colunas_esperadas):
-        st.error("❌ O CSV não possui todas as colunas esperadas.")
-        st.write("Colunas encontradas:", df.columns.tolist())
-        st.stop()
-
+    df = pd.read_csv(CSV_PATH, sep=";", encoding="utf-8")
 except Exception as e:
     st.error(f"Erro ao carregar o CSV: {e}")
     st.stop()
 
-# Limpar e padronizar
-df["Em Funcionamento"] = df["Em Funcionamento"].str.lower().fillna("")
+# Corrige nomes de colunas com espaços extras
+df.columns = df.columns.str.strip()
 
-# Métricas
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total de Câmeras", len(df))
-col2.metric("Câmeras ON", df["Em Funcionamento"].eq("sim").sum())
-col3.metric("Câmeras OFF", df["Em Funcionamento"].eq("não").sum())
-col4.metric("Câmeras Gravando", df["Gravando em Disco"].str.lower().eq("sim").sum())
+# Converte colunas específicas para tratamento
+df["Em Funcionamento"] = df["Em Funcionamento"].astype(str).str.strip().str.lower()
+df["Modelo"] = df["Modelo"].astype(str).str.strip()
+df["FPS"] = pd.to_numeric(df["FPS"], errors="coerce")
+df["Dias de gravação"] = pd.to_numeric(df["Dias de gravação"], errors="coerce")
+df["Gravando em Disco"] = df["Gravando em Disco"].astype(str).str.strip().str.lower()
 
-# Exibir tabela
-st.subheader("📋 Tabela Completa")
-st.dataframe(df)
+# Filtros
+with st.sidebar:
+    st.header("🎛️ Filtros")
+    status = st.multiselect("Status de Funcionamento", ["sim", "não"], default=["sim", "não"])
+    modelos = st.multiselect("Modelo da Câmera", sorted(df["Modelo"].unique()))
+    min_fps, max_fps = int(df["FPS"].min()), int(df["FPS"].max())
+    fps_range = st.slider("FPS", min_value=min_fps, max_value=max_fps, value=(min_fps, max_fps))
 
-# Gráficos
-st.subheader("📊 Distribuição por Modelo")
-modelo_counts = df["Modelo"].value_counts()
-st.bar_chart(modelo_counts)
+# Aplica filtros
+filtro = (
+    df["Em Funcionamento"].isin(status) &
+    df["FPS"].between(fps_range[0], fps_range[1])
+)
+if modelos:
+    filtro &= df["Modelo"].isin(modelos)
 
-st.subheader("📈 FPS por câmera")
-st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
+df_filtrado = df[filtro]
 
-st.subheader("💾 Dias de Gravação")
-st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
+# Métricas no topo
+col1, col2, col3 = st.columns(3)
+col1.metric("Total de Câmeras", len(df_filtrado))
+col2.metric("Câmeras ON", (df_filtrado["Em Funcionamento"] == "sim").sum())
+col3.metric("Câmeras Gravando", (df_filtrado["Gravando em Disco"] == "sim").sum())
+
+# Exibe a tabela
+st.markdown("### 📋 Tabela de Câmeras")
+st.dataframe(df_filtrado, use_container_width=True)
