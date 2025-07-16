@@ -5,7 +5,7 @@ import re
 
 # Título da aplicação
 st.set_page_config(layout="wide")
-st.title("📷 Dashboard de Câmeras - Digifort")
+st.title("📷 Dashboard Servidor 01 - Atem Belém")
 
 # Upload do arquivo CSV
 st.sidebar.header("📁 Carregar arquivo CSV")
