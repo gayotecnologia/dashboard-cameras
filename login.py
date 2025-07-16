@@ -5,7 +5,7 @@ def check_login():
     username = st.sidebar.text_input("Usuário")
     password = st.sidebar.text_input("Senha", type="password")
 
-    if username == "admin" and password == "123456":
+    if username == "romilson" and password == "1234":
         return True
     else:
         if username or password:
