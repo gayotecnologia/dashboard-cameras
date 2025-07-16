@@ -14,9 +14,12 @@ CSV_PATH = "status_cameras.csv"
 
 try:
     df = pd.read_csv(CSV_PATH, sep=";", encoding="utf-8")
+    st.write("🧾 Colunas encontradas no CSV:")
+    st.write(df.columns.tolist())
 except Exception as e:
     st.error(f"Erro ao carregar o CSV: {e}")
     st.stop()
+
 
 # Corrige nomes de colunas com espaços extras
 df.columns = df.columns.str.strip()
