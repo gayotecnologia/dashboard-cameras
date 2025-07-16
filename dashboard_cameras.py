@@ -1,84 +1,69 @@
-import streamlit as st
 import pandas as pd
-import os
-from login import check_login
+import streamlit as st
 import plotly.express as px
 
-# Configuração da página
-st.set_page_config(page_title="Dashboard de Câmeras", layout="wide")
+# Carregar CSV
+arquivo_csv = "cameras.csv"
+df = pd.read_csv(arquivo_csv)
 
-# Autenticação
-if not check_login():
-    st.stop()
+# Renomear colunas
+df.rename(columns={
+    "Em Funcionamento": "Status",
+    "Dias de gravação": "DiasGravacao",
+    "Gravando em Disco": "Gravando",
+    "Disco Utilizado": "Disco"
+}, inplace=True)
 
-# Carregar dados do CSV
-csv_path = "status_cameras.csv"
-if not os.path.exists(csv_path):
-    st.error("Arquivo 'status_cameras.csv' não encontrado.")
-    st.stop()
+# Título
+st.title("📡 Dashboard de Câmeras - Gayo Tecnologia")
 
-dados = pd.read_csv(csv_path)
+# Métricas principais
+qtd_cameras_total = len(df)
+qtd_cameras_online = len(df[df["Status"] == "Sim"])
+qtd_cameras_offline = qtd_cameras_total - qtd_cameras_online
 
-# Menu lateral
-menu = st.sidebar.selectbox("📋 Menu", ["Status das Câmeras", "Relatório", "Gráficos"])
+dias_gravacao_medio = df["DiasGravacao"].mean()
+fps_medio = df["FPS"].mean()
+uso_total_disco = df["Disco"].sum()
 
-if menu == "Status das Câmeras":
-    st.title("📡 Status das Câmeras")
-    status_selecionado = st.multiselect(
-        "Filtrar por status",
-        options=dados["Status"].unique(),
-        default=dados["Status"].unique()
-    )
-    dados_filtrados = dados[dados["Status"].isin(status_selecionado)]
+col1, col2, col3 = st.columns(3)
+col1.metric("Total de Câmeras", qtd_cameras_total)
+col2.metric("Online", qtd_cameras_online)
+col3.metric("Offline", qtd_cameras_offline)
 
-    total_cameras = dados_filtrados.shape[0]
-    online_count = dados_filtrados[dados_filtrados["Status"] == "Online"].shape[0]
-    offline_count = dados_filtrados[dados_filtrados["Status"] == "Offline"].shape[0]
-    online_percent = (online_count / total_cameras * 100) if total_cameras > 0 else 0
+col4, col5, col6 = st.columns(3)
+col4.metric("Dias Médios de Gravação", f"{dias_gravacao_medio:.1f}")
+col5.metric("FPS Médio", f"{fps_medio:.1f}")
+col6.metric("Uso Total de Disco (GB)", f"{uso_total_disco:.1f}")
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Câmeras Online", online_count)
-    col2.metric("Câmeras Offline", offline_count)
-    col3.metric("Porcentagem Online", f"{online_percent:.2f}%")
+# Gráfico de pizza: status
+st.subheader("📊 Status das Câmeras")
+status_counts = df["Status"].value_counts()
+fig_status = px.pie(names=status_counts.index, values=status_counts.values, title="Câmeras Online x Offline")
+st.plotly_chart(fig_status)
 
-    st.dataframe(dados_filtrados, use_container_width=True)
+# Gráfico de barras: câmeras por modelo
+st.subheader("📊 Câmeras por Modelo")
+model_counts = df["Modelo"].value_counts().reset_index()
+model_counts.columns = ["Modelo", "Quantidade"]
+fig_modelos = px.bar(model_counts, x="Modelo", y="Quantidade", title="Quantidade por Modelo", text_auto=True)
+st.plotly_chart(fig_modelos)
 
-elif menu == "Relatório":
-    st.title("📄 Exportar Relatório")
-    st.write("Clique abaixo para exportar o status das câmeras:")
-    st.download_button(
-        label="📥 Exportar CSV",
-        data=dados.to_csv(index=False).encode("utf-8"),
-        file_name="relatorio_cameras.csv",
-        mime="text/csv"
-    )
+# Filtro de status
+st.subheader("📋 Tabela de Câmeras")
+status_filtro = st.selectbox("Filtrar por status", ["Todos", "Online", "Offline"])
+if status_filtro == "Online":
+    df_filtrado = df[df["Status"] == "Sim"]
+elif status_filtro == "Offline":
+    df_filtrado = df[df["Status"] != "Sim"]
+else:
+    df_filtrado = df
 
-elif menu == "Gráficos":
-    st.title("📊 Análises Visuais das Câmeras")
+# Ordenar por uso de disco
+df_filtrado = df_filtrado.sort_values(by="Disco", ascending=False)
 
-    # Gráfico de status
-    status_count = dados["Status"].value_counts().reset_index()
-    status_count.columns = ["Status", "Quantidade"]
-    fig_status = px.bar(
-        status_count,
-        x="Status",
-        y="Quantidade",
-        color="Status",
-        color_discrete_map={"Online": "green", "Offline": "red"},
-        title="Quantidade de Câmeras por Status",
-        text="Quantidade"
-    )
-    st.plotly_chart(fig_status, use_container_width=True)
+# Mostrar tabela
+st.dataframe(df_filtrado)
 
-    # Gráfico de FPS por modelo
-    st.subheader("📈 Média de FPS por Modelo de Câmera")
-    fps_media = dados.groupby("Modelo")["FPS"].mean().reset_index().sort_values(by="FPS")
-    fig_fps = px.bar(
-        fps_media,
-        x="Modelo",
-        y="FPS",
-        color="FPS",
-        color_continuous_scale="Blues",
-        title="Média de FPS por Modelo"
-    )
-    st.plotly_chart(fig_fps, use_container_width=True)
+# Exportar
+st.download_button("📥 Baixar dados filtrados", df_filtrado.to_csv(index=False), file_name="cameras_filtrado.csv")
