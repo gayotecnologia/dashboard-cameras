@@ -3,7 +3,8 @@ import pandas as pd
 import plotly.express as px
 import re
 import os
-import login  # importa usuário e senha
+from login import USUARIO_CORRETO, SENHA_CORRETA
+  # importa usuário e senha
 
 st.set_page_config(layout="wide")
 st.title("📷 Dashboard de Câmeras - Digifort")
