@@ -1,93 +1,52 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import re
+from login import check_login
 
-# Título da aplicação
-st.set_page_config(layout="wide")
-st.title("📷 Dashboard Servidor 01 - Atem Belém")
+# Autenticação
+if not check_login():
+    st.stop()
 
-# Upload do arquivo CSV
-st.sidebar.header("📁 Carregar arquivo CSV")
-arquivo = st.sidebar.file_uploader("Escolha o arquivo extraído do Digifort", type="csv")
+# Título
+st.title("📹 Dashboard de Status das Câmeras")
 
-if arquivo is not None:
-    # Leitura do CSV
-    try:
-        df = pd.read_csv(arquivo, sep=';', encoding='utf-8')
+# Leitura segura do CSV com diagnóstico
+try:
+    df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
 
-        # Tratamento de colunas
-        df.columns = df.columns.str.strip()
+    colunas_esperadas = [
+        "Nome", "Em Funcionamento", "Endereço", "Descrição",
+        "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado"
+    ]
+    if not all(col in df.columns for col in colunas_esperadas):
+        st.error("❌ O CSV não possui todas as colunas esperadas.")
+        st.write("Colunas encontradas:", df.columns.tolist())
+        st.stop()
 
-        # Convertendo valores booleanos (Sim/Não) para True/False
-        df["Em Funcionamento"] = df["Em Funcionamento"].str.lower() == "sim"
-        df["Gravando em Disco"] = df["Gravando em Disco"].str.lower() == "sim"
-        df["Ativado"] = df["Ativado"].str.lower() == "sim"
+except Exception as e:
+    st.error(f"Erro ao carregar o CSV: {e}")
+    st.stop()
 
-        # FPS em número
-        df["FPS"] = pd.to_numeric(df["FPS"], errors="coerce")
+# Limpar e padronizar
+df["Em Funcionamento"] = df["Em Funcionamento"].str.lower().fillna("")
 
-        # Disco em TB: converter unidades como "868 GB" ou "6 TB"
-        def converter_disco(valor):
-            if isinstance(valor, str):
-                valor = valor.strip().lower()
-                if "tb" in valor:
-                    return float(re.search(r"[\d.,]+", valor).group().replace(",", ".")) * 1
-                elif "gb" in valor:
-                    return float(re.search(r"[\d.,]+", valor).group().replace(",", ".")) / 1024
-            return 0
+# Métricas
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Total de Câmeras", len(df))
+col2.metric("Câmeras ON", df["Em Funcionamento"].eq("sim").sum())
+col3.metric("Câmeras OFF", df["Em Funcionamento"].eq("não").sum())
+col4.metric("Câmeras Gravando", df["Gravando em Disco"].str.lower().eq("sim").sum())
 
-        df["Disco (TB)"] = df["Disco Utilizado"].apply(converter_disco)
+# Exibir tabela
+st.subheader("📋 Tabela Completa")
+st.dataframe(df)
 
-        # Dias de gravação (extrair apenas os dias)
-        df["Dias"] = df["Dias de gravação"].str.extract(r"(\d+)").astype(float)
+# Gráficos
+st.subheader("📊 Distribuição por Modelo")
+modelo_counts = df["Modelo"].value_counts()
+st.bar_chart(modelo_counts)
 
-        # Filtros
-        st.sidebar.subheader("Filtros")
-        modelos_selecionados = st.sidebar.multiselect("Filtrar por modelo", options=df["Modelo"].unique(), default=df["Modelo"].unique())
-        df_filtrado = df[df["Modelo"].isin(modelos_selecionados)]
+st.subheader("📈 FPS por câmera")
+st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
 
-        # Métricas
-        total_cameras = len(df_filtrado)
-        cameras_online = df_filtrado["Em Funcionamento"].sum()
-        cameras_offline = total_cameras - cameras_online
-        fps_medio = df_filtrado["FPS"].mean()
-        dias_gravacao_medio = df_filtrado["Dias"].mean()
-        disco_total_tb = df_filtrado["Disco (TB)"].sum()
-
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
-        col1.metric("📸 Total de Câmeras", total_cameras)
-        col2.metric("🟢 Online", cameras_online)
-        col3.metric("🔴 Offline", cameras_offline)
-        col4.metric("🎞️ FPS Médio", f"{fps_medio:.1f}")
-        col5.metric("🗓️ Dias Gravando (média)", f"{dias_gravacao_medio:.1f}")
-        col6.metric("💾 Disco Total (TB)", f"{disco_total_tb:.2f}")
-
-        st.markdown("---")
-
-        # Gráfico por modelo
-        st.subheader("Distribuição por Modelo de Câmera")
-        grafico_modelo = df_filtrado["Modelo"].value_counts().reset_index()
-        grafico_modelo.columns = ["Modelo", "Quantidade"]
-
-        fig1 = px.bar(grafico_modelo, x="Modelo", y="Quantidade", title="Quantidade por Modelo", text_auto=True)
-        st.plotly_chart(fig1, use_container_width=True)
-
-        # Gráfico de câmera online/offline
-        st.subheader("Status das Câmeras")
-        status = {
-            "Online": cameras_online,
-            "Offline": cameras_offline
-        }
-        fig2 = px.pie(names=list(status.keys()), values=list(status.values()), title="Status das Câmeras")
-        st.plotly_chart(fig2, use_container_width=True)
-
-        # Tabela com detalhes
-        st.subheader("📋 Tabela de Câmeras")
-        st.dataframe(df_filtrado.drop(columns=["Disco Utilizado"]), use_container_width=True)
-
-    except Exception as e:
-        st.error(f"Erro ao processar o arquivo: {e}")
-
-else:
-    st.warning("Faça o upload de um arquivo CSV para visualizar os dados.")
+st.subheader("💾 Dias de Gravação")
+st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
