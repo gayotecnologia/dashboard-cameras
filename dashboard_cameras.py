@@ -2,13 +2,6 @@ import streamlit as st
 import pandas as pd
 from PIL import Image
 from login import check_login
-from datetime import datetime
-from io import BytesIO
-from fpdf import FPDF
-import matplotlib.pyplot as plt
-import seaborn as sns
-import base64
-import os
 
 # Checa login antes de qualquer coisa
 check_login()
@@ -20,43 +13,11 @@ st.set_page_config(layout="wide")
 logo_esquerda = Image.open("logo.jpeg")
 logo_direita = Image.open("atem.png")
 
-# Codifica as imagens em base64
-import io
-buffer_esq = io.BytesIO()
-logo_esquerda.save(buffer_esq, format="JPEG")
-img_str_esq = base64.b64encode(buffer_esq.getvalue()).decode()
-
-buffer_dir = io.BytesIO()
-logo_direita.save(buffer_dir, format="PNG")
-img_str_dir = base64.b64encode(buffer_dir.getvalue()).decode()
-
-# Layout com duas logos no topo responsivo
-st.markdown(f"""
-    <style>
-        @media only screen and (max-width: 600px) {{
-            .logo-container {{
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }}
-            .logo-container img {{
-                height: 30px !important;
-                width: auto;
-            }}
-        }}
-        .logo-container {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }}
-        .logo-container img {{
-            height: 60px;
-            width: auto;
-        }}
-    </style>
-    <div class="logo-container">
-        <img src="data:image/jpeg;base64,{img_str_esq}" alt="Logo Esquerda">
-        <img src="data:image/png;base64,{img_str_dir}" alt="Logo Direita">
+# Exibe as logos de forma responsiva
+st.markdown("""
+    <div style='display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0;'>
+        <img src='data:image/png;base64,""" + logo_esquerda.tobytes().hex() + """' style='height: 50px;'>
+        <img src='data:image/png;base64,""" + logo_direita.tobytes().hex() + """' style='height: 50px;'>
     </div>
 """, unsafe_allow_html=True)
 
@@ -64,14 +25,18 @@ st.markdown(f"""
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
 
 # Leitura do CSV
-df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
-colunas_esperadas = [
-    "Nome", "Em Funcionamento", "Endereço", "Descrição",
-    "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado"
-]
-if not all(col in df.columns for col in colunas_esperadas):
-    st.error("❌ O CSV não possui todas as colunas esperadas.")
-    st.write("Colunas encontradas:", df.columns.tolist())
+try:
+    df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
+    colunas_esperadas = [
+        "Nome", "Em Funcionamento", "Endereço", "Descrição",
+        "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado"
+    ]
+    if not all(col in df.columns for col in colunas_esperadas):
+        st.error("❌ O CSV não possui todas as colunas esperadas.")
+        st.write("Colunas encontradas:", df.columns.tolist())
+        st.stop()
+except Exception as e:
+    st.error(f"Erro ao carregar o CSV: {e}")
     st.stop()
 
 # Normalizar campos
@@ -102,13 +67,13 @@ def card(title, value, color):
 st.markdown("## 📊 Visão Geral")
 col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
 with col1:
-    card("Total Câmeras", total_cameras, "#343a40")
+    card("Total Câmeras", total_cameras, "#343a40")  # cinza escuro
 with col2:
-    card("Câmeras ON", on_cameras, "#198754")
+    card("Câmeras ON", on_cameras, "#198754")  # verde
 with col3:
-    card("Câmeras OFF", off_cameras, "#dc3545")
+    card("Câmeras OFF", off_cameras, "#dc3545")  # vermelho
 with col4:
-    card("Gravando", gravando, "#0d6efd")
+    card("Gravando", gravando, "#0d6efd")  # azul
 with col5:
     cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
     card("Online (%)", f"{percent_on}%", cor_percent)
@@ -136,58 +101,15 @@ if modelo_filtro != "Todos":
 
 st.dataframe(df_filtrado, use_container_width=True)
 
-# Exportar Relatório PDF (abaixo da tabela)
-def gerar_pdf(dados, nome="relatorio.pdf"):
-    pdf = FPDF(orientation='L', unit='mm', format='A4')
-    pdf.add_page()
-
-    # Adiciona logos
-    pdf.image("logo.jpeg", x=10, y=8, w=30)
-    pdf.image("atem.png", x=250, y=8, w=30)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 15, f"Relatório de Câmeras - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", ln=True, align="C")
-    pdf.ln(5)
-
-    # Tabela
-    pdf.set_font("Arial", size=5.5)
-    colunas = dados.columns.tolist()
-    largura_coluna = 270 / len(colunas)
-
-    for col in colunas:
-        pdf.cell(largura_coluna, 6, col[:30], border=1)
-    pdf.ln()
-
-    for _, row in dados.iterrows():
-        for item in row:
-            texto = str(item)
-            pdf.cell(largura_coluna, 6, texto[:60], border=1)
-        pdf.ln()
-
-    pdf_output = pdf.output(dest='S').encode('latin1')
-    buffer = BytesIO(pdf_output)
-    return buffer
-
-st.markdown("### 📤 Exportar Relatório Filtrado")
-pdf_filtrado = gerar_pdf(df_filtrado)
-st.download_button("📄 Baixar PDF Filtrado", data=pdf_filtrado, file_name="relatorio_filtrado.pdf")
-
-# Gráficos
+# Gráfico: Distribuição por Modelo
 st.markdown("---")
-st.markdown("### 📈 Gráficos")
-fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 4))
-sns.countplot(data=df_filtrado, x="Em Funcionamento", ax=ax1)
-ax1.set_title("Funcionamento")
-sns.countplot(data=df_filtrado, x="Gravando em Disco", ax=ax2)
-ax2.set_title("Gravando em Disco")
-df_grafico = df_filtrado[["Nome", "Dias de gravação"]].dropna()
-try:
-    df_grafico["Dias de gravação"] = pd.to_numeric(df_grafico["Dias de gravação"], errors="coerce")
-    df_grafico = df_grafico.dropna(subset=["Dias de gravação"])
-    df_grafico = df_grafico.sort_values("Dias de gravação", ascending=False).head(10)
-    df_grafico.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax3, legend=False)
-    ax3.set_title("Top 10 Dias de Gravação")
-    ax3.set_xticklabels(ax3.get_xticklabels(), rotation=45, ha="right")
-except:
-    ax3.set_visible(False)
+st.subheader("📦 Distribuição por Modelo")
+st.bar_chart(df["Modelo"].value_counts())
 
-st.pyplot(fig)
+# Gráfico: FPS por Câmera
+st.subheader("📈 FPS por Câmera")
+st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
+
+# Gráfico: Dias de Gravação por Câmera
+st.subheader("📊 Dias de Gravação por Câmera")
+st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
