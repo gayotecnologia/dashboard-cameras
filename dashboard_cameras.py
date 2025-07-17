@@ -4,7 +4,7 @@ from PIL import Image
 from datetime import datetime, timedelta
 from login import check_login
 from io import BytesIO
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 import base64
@@ -32,8 +32,8 @@ logo_direita_base64 = pil_image_to_base64(logo_direita)
 # Exibe as logos de forma responsiva
 st.markdown(f"""
     <div style='display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0;'>
-        <img src='data:image/png;base64,{logo_esquerda_base64}' style='height: 50px;'>
-        <img src='data:image/png;base64,{logo_direita_base64}' style='height: 50px;'>
+        <img src='data:image/png;base64,{logo_esquerda_base64}' style='height: 40px;'>
+        <img src='data:image/png;base64,{logo_direita_base64}' style='height: 40px;'>
     </div>
 """, unsafe_allow_html=True)
 
@@ -121,45 +121,45 @@ st.dataframe(df_filtrado, use_container_width=True)
 st.markdown("\n")
 if st.button("Exportar Relatório em PDF"):
     buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
+    c = canvas.Canvas(buffer, pagesize=landscape(A4))
+    width, height = landscape(A4)
 
     # Inserir logos menores no PDF
-    logo_width = 60
-    logo_height = 30
+    logo_width = 50
+    logo_height = 25
     c.drawImage(ImageReader(logo_esquerda), 40, height - logo_height - 20, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
     c.drawImage(ImageReader(logo_direita), width - logo_width - 40, height - logo_height - 20, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
 
     # Título
     c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width / 2, height - 70, "Relatório de Câmeras - Atem Belém")
+    c.drawCentredString(width / 2, height - 60, "Relatório de Câmeras - Atem Belém")
 
     # Data e hora local (GMT-3)
     fuso = pytz.timezone("America/Belem")
     data_local = datetime.now(fuso).strftime("%d/%m/%Y %H:%M:%S")
     c.setFont("Helvetica", 10)
-    c.drawString(40, height - 90, "Data/Hora: " + data_local)
+    c.drawString(40, height - 80, "Data/Hora: " + data_local)
 
     # Tabela de dados
     x_offset = 40
-    y_offset = height - 120
+    y_offset = height - 100
     row_height = 12
     font_size = 6
     c.setFont("Helvetica", font_size)
 
     columns = list(df_filtrado.columns)
-    col_widths = [90 if col == "Descrição" else 50 for col in columns]
+    col_widths = [90 if col == "Descrição" else 60 for col in columns]
 
     for i, col in enumerate(columns):
         x = x_offset + sum(col_widths[:i])
         if col == "Ativado":
-            c.drawCentredString(x + col_widths[i]/2, y_offset, col[:18])
+            c.drawCentredString(x + col_widths[i]/2, y_offset, col[:29])
         elif col in ["Gravando em Disco", "FPS", "Disco Utilizado"]:
-            c.drawRightString(x + col_widths[i], y_offset, col[:18])
+            c.drawRightString(x + col_widths[i], y_offset, col[:29])
         elif col in ["Modelo", "Dias de gravação"]:
-            c.drawCentredString(x + col_widths[i]/2, y_offset, col[:18])
+            c.drawCentredString(x + col_widths[i]/2, y_offset, col[:29])
         else:
-            c.drawString(x, y_offset, col[:18])
+            c.drawString(x, y_offset, col[:29])
 
     y_offset -= row_height
     for index, row in df_filtrado.iterrows():
@@ -173,19 +173,19 @@ if st.button("Exportar Relatório em PDF"):
             x = x_offset + sum(col_widths[:i])
             texto = str(row[col])
             if col == "Descrição":
-                texto = (texto[:35] + "...") if len(texto) > 38 else texto
+                texto = (texto[:29] + "...") if len(texto) > 29 else texto
                 c.drawString(x, y_offset, texto)
             elif col == "Ativado":
-                texto = texto[:20].rjust(20)
+                texto = texto[:29].rjust(29)
                 c.drawRightString(x + col_widths[i], y_offset, texto)
             elif col in ["Gravando em Disco", "FPS", "Disco Utilizado"]:
-                texto = texto[:20]
+                texto = texto[:29]
                 c.drawRightString(x + col_widths[i], y_offset, texto)
             elif col in ["Modelo", "Dias de gravação"]:
-                texto = texto[:20]
+                texto = texto[:29]
                 c.drawCentredString(x + col_widths[i]/2, y_offset, texto)
             else:
-                texto = texto[:20]
+                texto = texto[:29]
                 c.drawString(x, y_offset, texto)
         y_offset -= row_height
 
