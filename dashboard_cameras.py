@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from PIL import Image
 from login import check_login
+import base64
+import io
 
 # Checa login antes de qualquer coisa
 check_login()
@@ -9,42 +11,34 @@ check_login()
 # Configura a página para ser responsiva
 st.set_page_config(layout="wide")
 
-# Carrega imagens das logos
-logo_esquerda = Image.open("logo.jpeg")
-logo_direita = Image.open("atem.png")
+# Função para converter imagem para base64
+def image_to_base64(img_path, format='JPEG', size=(100, 100)):
+    img = Image.open(img_path).convert("RGB")
+    img = img.resize(size)
+    buffer = io.BytesIO()
+    img.save(buffer, format=format)
+    return base64.b64encode(buffer.getvalue()).decode()
 
-# Logos adaptáveis para desktop e mobile
-st.markdown("""
-    <style>
-    .logo-container {
+# Carrega imagens das logos em base64
+logo_esquerda_b64 = image_to_base64("logo.jpeg", format="JPEG")
+logo_direita_b64 = image_to_base64("atem.png", format="PNG")
+
+# Layout responsivo com HTML e CSS flex
+st.markdown(
+    f"""
+    <div style="
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-    }
-    .logo {
-        max-height: 60px;
-        height: auto;
-        width: auto;
-    }
-    @media (max-width: 768px) {
-        .logo-container {
-            flex-direction: row;
-            justify-content: space-between;
-        }
-        .logo {
-            max-height: 40px;
-        }
-    }
-    </style>
-    <div class="logo-container">
-        <img src="data:image/jpeg;base64,{}" class="logo" />
-        <img src="data:image/png;base64,{}" class="logo" />
+        padding: 10px 0;
+    ">
+        <img src="data:image/jpeg;base64,{logo_esquerda_b64}" alt="Logo Esquerda" style="height: 60px; max-width: 45%;">
+        <img src="data:image/png;base64,{logo_direita_b64}" alt="Logo Direita" style="height: 60px; max-width: 45%;">
     </div>
-    """.format(
-    st.image_to_bytes(logo_esquerda, format="JPEG"),
-    st.image_to_bytes(logo_direita, format="PNG")
-), unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
 
 # Título
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
