@@ -4,8 +4,9 @@ import streamlit as st
 def check_login():
     # Dicionário com usuários e senhas
     users = {
-        "admin": "1234",
-        "romilson": "gayo2024"
+        "admin": "GayoSeg25",
+        "rodrigo": "sspatem",
+        "jefferson": "sspatem",
     }
 
     # Sessão de autenticação
