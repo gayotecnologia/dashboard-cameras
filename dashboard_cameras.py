@@ -1,6 +1,10 @@
 import streamlit as st
 import pandas as pd
 from PIL import Image
+from login import check_login
+
+# Checa login antes de qualquer coisa
+check_login()
 
 # Centraliza a logo com tamanho reduzido
 col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
