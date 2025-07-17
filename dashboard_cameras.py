@@ -10,7 +10,7 @@ check_login()
 col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
 with col_logo2:
     image = Image.open("logo.jpeg")
-    st.image(image, width=50)
+    st.image(image, width=100)
 
 # Título
 st.markdown("<h3 style='text-align: center;'> Dashboard de câmeras - Atem Belém.</h3>", unsafe_allow_html=True)
