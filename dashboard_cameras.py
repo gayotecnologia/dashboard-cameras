@@ -116,26 +116,16 @@ if modelo_filtro != "Todos":
 
 st.dataframe(df_filtrado, use_container_width=True)
 
-# Gráficos
-st.markdown("---")
-st.subheader("📦 Distribuição por Modelo")
-st.bar_chart(df["Modelo"].value_counts())
-
-st.subheader("📈 FPS por Câmera")
-st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
-
-st.subheader("📊 Dias de Gravação por Câmera")
-st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
-
 # Botão para exportar PDF
+st.markdown("\n")
 if st.button("Exportar Relatório em PDF"):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
     # Inserir logos
-    c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True)
-    c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True)
+    c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True, mask='auto')
+    c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True, mask='auto')
 
     # Título
     c.setFont("Helvetica-Bold", 14)
@@ -162,14 +152,14 @@ if st.button("Exportar Relatório em PDF"):
     for index, row in df_filtrado.iterrows():
         if y_offset < 40:
             c.showPage()
-            c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True)
-            c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True)
+            c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True, mask='auto')
+            c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True, mask='auto')
             y_offset = height - 80
             c.setFont("Helvetica", font_size)
         for i, col in enumerate(columns):
             texto = str(row[col])
             if col == "Descrição":
-                texto = (texto[:45] + "...") if len(texto) > 48 else texto
+                texto = (texto[:35] + "...") if len(texto) > 38 else texto
             else:
                 texto = texto[:20]
             c.drawString(x_offset + sum(col_widths[:i]), y_offset, texto)
@@ -182,3 +172,14 @@ if st.button("Exportar Relatório em PDF"):
         file_name="relatorio_cameras.pdf",
         mime="application/pdf"
     )
+
+# Gráficos
+st.markdown("---")
+st.subheader("📦 Distribuição por Modelo")
+st.bar_chart(df["Modelo"].value_counts())
+
+st.subheader("📈 FPS por Câmera")
+st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
+
+st.subheader("📊 Dias de Gravação por Câmera")
+st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
