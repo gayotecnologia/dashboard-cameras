@@ -20,7 +20,6 @@ logo_esquerda = Image.open("logo.jpeg")
 logo_direita = Image.open("atem.png")
 
 # Converter imagens para base64
-from io import BytesIO
 def pil_image_to_base64(img):
     buffer = BytesIO()
     img.save(buffer, format="PNG")
@@ -117,23 +116,26 @@ if modelo_filtro != "Todos":
 
 st.dataframe(df_filtrado, use_container_width=True)
 
+# Gráficos
+st.markdown("---")
+st.subheader("📦 Distribuição por Modelo")
+st.bar_chart(df["Modelo"].value_counts())
+
+st.subheader("📈 FPS por Câmera")
+st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
+
+st.subheader("📊 Dias de Gravação por Câmera")
+st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
+
 # Botão para exportar PDF
 if st.button("Exportar Relatório em PDF"):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
-    # Recarregar as logos para o PDF
-    logo_esq_io = BytesIO()
-    logo_dir_io = BytesIO()
-    logo_esquerda.save(logo_esq_io, format='PNG')
-    logo_direita.save(logo_dir_io, format='PNG')
-    logo_esq_io.seek(0)
-    logo_dir_io.seek(0)
-
     # Inserir logos
-    c.drawImage(ImageReader(logo_esq_io), 40, height - 60, width=100, preserveAspectRatio=True, mask='auto')
-    c.drawImage(ImageReader(logo_dir_io), width - 140, height - 60, width=100, preserveAspectRatio=True, mask='auto')
+    c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True)
+    c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True)
 
     # Título
     c.setFont("Helvetica-Bold", 14)
@@ -142,47 +144,6 @@ if st.button("Exportar Relatório em PDF"):
     # Data e hora
     c.setFont("Helvetica", 10)
     c.drawString(40, height - 100, "Data/Hora: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
-
-    # Tabela de dados
-    x_offset = 40
-    y_offset = height - 130
-    row_height = 12
-    font_size = 6
-    c.setFont("Helvetica", font_size)
-
-    columns = list(df_filtrado.columns)
-    col_widths = [90 if col == "Descrição" else 60 for col in columns]
-
-    # Cabeçalhos
-    for i, col in enumerate(columns):
-        c.drawString(x_offset + sum(col_widths[:i]), y_offset, col[:18])
-
-    # Linhas da tabela
-    y_offset -= row_height
-    for index, row in df_filtrado.iterrows():
-        if y_offset < 60:
-            c.showPage()
-            y_offset = height - 60
-            c.setFont("Helvetica", font_size)
-            c.drawImage(ImageReader(logo_esq_io), 40, height - 60, width=100, preserveAspectRatio=True, mask='auto')
-            c.drawImage(ImageReader(logo_dir_io), width - 140, height - 60, width=100, preserveAspectRatio=True, mask='auto')
-        for i, col in enumerate(columns):
-            texto = str(row[col])
-            if col == "Descrição":
-                texto = (texto[:40] + "...") if len(texto) > 43 else texto
-            else:
-                texto = texto[:20]
-            c.drawString(x_offset + sum(col_widths[:i]), y_offset, texto)
-        y_offset -= row_height
-
-    c.save()
-    st.download_button(
-        label="🔍 Baixar Relatório PDF",
-        data=buffer.getvalue(),
-        file_name="relatorio_cameras.pdf",
-        mime="application/pdf"
-    )
-
 
     # Tabela de dados
     x_offset = 40
@@ -201,10 +162,10 @@ if st.button("Exportar Relatório em PDF"):
     for index, row in df_filtrado.iterrows():
         if y_offset < 40:
             c.showPage()
-            y_offset = height - 60
-            c.setFont("Helvetica", font_size)
             c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True)
             c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True)
+            y_offset = height - 80
+            c.setFont("Helvetica", font_size)
         for i, col in enumerate(columns):
             texto = str(row[col])
             if col == "Descrição":
@@ -221,16 +182,3 @@ if st.button("Exportar Relatório em PDF"):
         file_name="relatorio_cameras.pdf",
         mime="application/pdf"
     )
-
-# Gráfico: Distribuição por Modelo
-st.markdown("---")
-st.subheader("📦 Distribuição por Modelo")
-st.bar_chart(df["Modelo"].value_counts())
-
-# Gráfico: FPS por Câmera
-st.subheader("📈 FPS por Câmera")
-st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
-
-# Gráfico: Dias de Gravação por Câmera
-st.subheader("📊 Dias de Gravação por Câmera")
-st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
