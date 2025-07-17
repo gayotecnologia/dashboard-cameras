@@ -19,12 +19,24 @@ logo_esquerda = Image.open("logo.jpeg")
 logo_direita = Image.open("atem.png")
 
 # Exibe as logos de forma responsiva
-st.markdown("""
+import base64
+from io import BytesIO
+
+def pil_image_to_base64(img):
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode()
+
+logo_esquerda_base64 = pil_image_to_base64(logo_esquerda)
+logo_direita_base64 = pil_image_to_base64(logo_direita)
+
+st.markdown(f"""
     <div style='display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0;'>
-        <img src='data:image/png;base64,""" + logo_esquerda.tobytes().hex() + """' style='height: 50px;'>
-        <img src='data:image/png;base64,""" + logo_direita.tobytes().hex() + """' style='height: 50px;'>
+        <img src='data:image/png;base64,{logo_esquerda_base64}' style='height: 50px;'>
+        <img src='data:image/png;base64,{logo_direita_base64}' style='height: 50px;'>
     </div>
 """, unsafe_allow_html=True)
+
 
 # Título
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
