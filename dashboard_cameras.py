@@ -1,11 +1,12 @@
 import streamlit as st
 import pandas as pd
 from PIL import Image
-from login import check_login
-import base64
-from io import BytesIO
 from datetime import datetime
-from fpdf import FPDF
+from login import check_login
+from io import BytesIO
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 
 # Checa login antes de qualquer coisa
 check_login()
@@ -17,20 +18,11 @@ st.set_page_config(layout="wide")
 logo_esquerda = Image.open("logo.jpeg")
 logo_direita = Image.open("atem.png")
 
-# Codifica imagens em base64 para exibição
-def image_to_base64(img):
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
-
-logo_esquerda_b64 = image_to_base64(logo_esquerda)
-logo_direita_b64 = image_to_base64(logo_direita)
-
-# Exibe as logos no topo
-st.markdown(f"""
+# Exibe as logos de forma responsiva
+st.markdown("""
     <div style='display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0;'>
-        <img src='data:image/png;base64,{logo_esquerda_b64}' style='height: 50px;'>
-        <img src='data:image/png;base64,{logo_direita_b64}' style='height: 50px;'>
+        <img src='data:image/png;base64,""" + logo_esquerda.tobytes().hex() + """' style='height: 50px;'>
+        <img src='data:image/png;base64,""" + logo_direita.tobytes().hex() + """' style='height: 50px;'>
     </div>
 """, unsafe_allow_html=True)
 
@@ -38,18 +30,71 @@ st.markdown(f"""
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
 
 # Leitura do CSV
-df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
+try:
+    df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
+    colunas_esperadas = [
+        "Nome", "Em Funcionamento", "Endereço", "Descrição",
+        "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado"
+    ]
+    if not all(col in df.columns for col in colunas_esperadas):
+        st.error("❌ O CSV não possui todas as colunas esperadas.")
+        st.write("Colunas encontradas:", df.columns.tolist())
+        st.stop()
+except Exception as e:
+    st.error(f"Erro ao carregar o CSV: {e}")
+    st.stop()
+
+# Normalizar campos
 df["Em Funcionamento"] = df["Em Funcionamento"].str.lower().fillna("").str.strip()
 df["Gravando em Disco"] = df["Gravando em Disco"].str.lower().fillna("").str.strip()
 
-# Filtros
+# Cálculos
+total_cameras = len(df)
+on_cameras = df["Em Funcionamento"].eq("sim").sum()
+off_cameras = df["Em Funcionamento"].eq("não").sum()
+gravando = df["Gravando em Disco"].eq("sim").sum()
+percent_on = round((on_cameras / total_cameras) * 100, 2)
+
+# Função para criar cartões com cor
+def card(title, value, color):
+    st.markdown(
+        f"""
+        <div style="background-color: {color}; padding: 10px; border-radius: 10px; text-align: center;
+                    color: white; font-weight: bold; font-size: 18px;">
+            <div style='font-size: 14px'>{title}</div>
+            <div style='font-size: 22px'>{value}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+# Cartões com layout responsivo
+st.markdown("## 📊 Visão Geral")
+col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
+with col1:
+    card("Total Câmeras", total_cameras, "#343a40")  # cinza escuro
+with col2:
+    card("Câmeras ON", on_cameras, "#198754")  # verde
+with col3:
+    card("Câmeras OFF", off_cameras, "#dc3545")  # vermelho
+with col4:
+    card("Gravando", gravando, "#0d6efd")  # azul
+with col5:
+    cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
+    card("Online (%)", f"{percent_on}%", cor_percent)
+
+# Filtro avançado
+st.markdown("---")
+st.subheader("📋 Tabela de Câmeras")
+st.markdown("Use os filtros abaixo para refinar os resultados.")
+
 col_f1, col_f2 = st.columns(2)
 with col_f1:
     opcao_filtro = st.selectbox("Filtrar por funcionamento:", ["Todos", "Somente ON", "Somente OFF"])
 with col_f2:
     modelo_filtro = st.selectbox("Filtrar por modelo:", ["Todos"] + sorted(df["Modelo"].dropna().unique().tolist()))
 
-# Aplica os filtros
+# Aplicar filtros
 df_filtrado = df.copy()
 if opcao_filtro == "Somente ON":
     df_filtrado = df_filtrado[df_filtrado["Em Funcionamento"] == "sim"]
@@ -59,52 +104,68 @@ elif opcao_filtro == "Somente OFF":
 if modelo_filtro != "Todos":
     df_filtrado = df_filtrado[df_filtrado["Modelo"] == modelo_filtro]
 
-# Exibe tabela
 st.dataframe(df_filtrado, use_container_width=True)
 
-# Botão para exportar relatório PDF
-if st.button("📄 Exportar Relatório Filtrado em PDF"):
-    class PDF(FPDF):
-        def header(self):
-            self.set_font("Arial", "B", 10)
-            self.cell(0, 10, "Relatório de Câmeras - Atem Belém", 0, 1, "C")
-            self.image("logo.jpeg", 10, 8, 30)
-            self.image("atem.png", 170, 8, 30)
-            self.ln(10)
-
-        def footer(self):
-            self.set_y(-15)
-            self.set_font("Arial", "I", 8)
-            self.cell(0, 10, f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", 0, 0, "C")
-
-        def chapter_title(self):
-            self.set_font("Arial", "B", 12)
-            self.ln(5)
-
-        def chapter_body(self, data):
-            self.set_font("Arial", size=7)
-            col_width = 190 / len(data.columns)
-            row_height = 6
-            for i, col in enumerate(data.columns):
-                self.cell(col_width, row_height, str(col), border=1)
-            self.ln(row_height)
-            for row in data.itertuples(index=False):
-                for item in row:
-                    self.cell(col_width, row_height, str(item), border=1)
-                self.ln(row_height)
-
-    pdf = PDF()
-    pdf.add_page()
-    pdf.chapter_title()
-    pdf.chapter_body(df_filtrado)
-
+# Botão para exportar PDF
+if st.button("Exportar Relatório em PDF"):
     buffer = BytesIO()
-    pdf.output(buffer)
-    buffer.seek(0)
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
 
+    # Inserir logos
+    c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True)
+    c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True)
+
+    # Título
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(width / 2, height - 80, "Relatório de Câmeras - Atem Belém")
+
+    # Data e hora
+    c.setFont("Helvetica", 10)
+    c.drawString(40, height - 100, "Data/Hora: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+
+    # Tabela de dados
+    x_offset = 40
+    y_offset = height - 130
+    row_height = 12
+    max_rows = 40
+    font_size = 6
+    c.setFont("Helvetica", font_size)
+
+    columns = list(df_filtrado.columns)
+    col_widths = [65] * len(columns)
+
+    for i, col in enumerate(columns):
+        c.drawString(x_offset + sum(col_widths[:i]), y_offset, col[:12])
+
+    y_offset -= row_height
+    for index, row in df_filtrado.iterrows():
+        if y_offset < 40:
+            c.showPage()
+            y_offset = height - 60
+            c.setFont("Helvetica", font_size)
+        for i, col in enumerate(columns):
+            texto = str(row[col])[:20]
+            c.drawString(x_offset + sum(col_widths[:i]), y_offset, texto)
+        y_offset -= row_height
+
+    c.save()
     st.download_button(
-        label="📥 Baixar Relatório PDF",
-        data=buffer,
-        file_name=f"relatorio_cameras_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+        label="🔍 Baixar Relatório PDF",
+        data=buffer.getvalue(),
+        file_name="relatorio_cameras.pdf",
         mime="application/pdf"
     )
+
+# Gráfico: Distribuição por Modelo
+st.markdown("---")
+st.subheader("📦 Distribuição por Modelo")
+st.bar_chart(df["Modelo"].value_counts())
+
+# Gráfico: FPS por Câmera
+st.subheader("📈 FPS por Câmera")
+st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
+
+# Gráfico: Dias de Gravação por Câmera
+st.subheader("📊 Dias de Gravação por Câmera")
+st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
