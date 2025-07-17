@@ -19,38 +19,45 @@ st.set_page_config(layout="wide")
 logo_esquerda = Image.open("logo.jpeg")
 logo_direita = Image.open("atem.png")
 
+# Codifica as imagens em base64
+import io
+buffer_esq = io.BytesIO()
+logo_esquerda.save(buffer_esq, format="JPEG")
+img_str_esq = base64.b64encode(buffer_esq.getvalue()).decode()
+
+buffer_dir = io.BytesIO()
+logo_direita.save(buffer_dir, format="PNG")
+img_str_dir = base64.b64encode(buffer_dir.getvalue()).decode()
+
 # Layout com duas logos no topo responsivo
-st.markdown("""
+st.markdown(f"""
     <style>
-        @media only screen and (max-width: 600px) {
-            .logo-container {
+        @media only screen and (max-width: 600px) {{
+            .logo-container {{
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-            }
-            .logo-container img {
-                height: 40px !important;
+            }}
+            .logo-container img {{
+                height: 30px !important;
                 width: auto;
-            }
-        }
-        .logo-container {
+            }}
+        }}
+        .logo-container {{
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-        .logo-container img {
+        }}
+        .logo-container img {{
             height: 60px;
             width: auto;
-        }
+        }}
     </style>
     <div class="logo-container">
-        <img src="data:image/jpeg;base64,{0}" alt="Logo Esquerda">
-        <img src="data:image/png;base64,{1}" alt="Logo Direita">
+        <img src="data:image/jpeg;base64,{img_str_esq}" alt="Logo Esquerda">
+        <img src="data:image/png;base64,{img_str_dir}" alt="Logo Direita">
     </div>
-""".format(
-    base64.b64encode(logo_esquerda.tobytes()).decode(),
-    base64.b64encode(logo_direita.tobytes()).decode()
-), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # Título
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
@@ -157,13 +164,11 @@ def gerar_pdf(dados, nome="relatorio.pdf"):
 st.markdown("### 📤 Exportar Relatórios em PDF")
 col_exp1, col_exp2 = st.columns(2)
 with col_exp1:
-    if st.button("Exportar Dados Filtrados"):
-        pdf = gerar_pdf(df_filtrado)
-        st.download_button("📄 Baixar PDF Filtrado", data=pdf, file_name="relatorio_filtrado.pdf")
+    pdf_filtrado = gerar_pdf(df_filtrado)
+    st.download_button("📄 Baixar PDF Filtrado", data=pdf_filtrado, file_name="relatorio_filtrado.pdf")
 with col_exp2:
-    if st.button("Exportar Todos os Dados"):
-        pdf = gerar_pdf(df)
-        st.download_button("📄 Baixar PDF Completo", data=pdf, file_name="relatorio_completo.pdf")
+    pdf_completo = gerar_pdf(df)
+    st.download_button("📄 Baixar PDF Completo", data=pdf_completo, file_name="relatorio_completo.pdf")
 
 # Gráfico: Distribuição por Modelo
 st.markdown("---")
