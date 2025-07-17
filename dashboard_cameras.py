@@ -10,7 +10,21 @@ check_login()
 col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
 with col_logo2:
     image = Image.open("logo.jpeg")
-    st.image(image, width=100)
+    import streamlit as st
+from PIL import Image
+
+# Carregar imagens
+logo_esquerda = Image.open("logo.jpeg")        # Sua logo
+logo_direita = Image.open("atem.png")          # Logo do cliente (ATEM)
+
+# Layout com duas logos no topo
+col1, col2, col3 = st.columns([1, 6, 1])
+
+with col1:
+    st.image(logo_esquerda, width=100)
+
+with col3:
+    st.image(logo_direita, width=100)
 
 # Título
 st.markdown("<h3 style='text-align: center;'> Dashboard de câmeras - Atem Belém.</h3>", unsafe_allow_html=True)
