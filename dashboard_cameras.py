@@ -175,13 +175,13 @@ if st.button("Exportar Relatório em PDF"):
                     texto = texto[:29] + "..."
                 c.drawString(x + 2, y_offset, texto)
             elif col == "Modelo":
-                if len(texto) > 25:
-                    texto = texto[:25] + "..."
+                if len(texto) > 20:
+                    texto = texto[:20] + "..."
                 c.drawString(x + 2, y_offset, texto)
+            elif col == "Dias de gravação":
+                c.drawRightString(x + col_widths[i] - 2, y_offset, texto)
             elif col in ["Gravando em Disco", "FPS", "Disco Utilizado"]:
                 c.drawRightString(x + col_widths[i] - 2, y_offset, texto)
-            elif col in ["Dias de gravação"]:
-                c.drawCentredString(x + col_widths[i]/2, y_offset, texto)
             else:
                 c.drawCentredString(x + col_widths[i]/2, y_offset, texto)
         y_offset -= row_height
