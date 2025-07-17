@@ -156,19 +156,10 @@ def gerar_pdf(dados, nome="relatorio.pdf"):
             pdf.cell(largura_coluna, 10, texto[:20], border=1)
         pdf.ln()
 
-    buffer = BytesIO()
-    pdf.output(buffer)
-    buffer.seek(0)
+    pdf_output = pdf.output(dest='S').encode('latin1')  # <- CORREÇÃO AQUI
+    buffer = BytesIO(pdf_output)
     return buffer
 
-st.markdown("### 📤 Exportar Relatórios em PDF")
-col_exp1, col_exp2 = st.columns(2)
-with col_exp1:
-    pdf_filtrado = gerar_pdf(df_filtrado)
-    st.download_button("📄 Baixar PDF Filtrado", data=pdf_filtrado, file_name="relatorio_filtrado.pdf")
-with col_exp2:
-    pdf_completo = gerar_pdf(df)
-    st.download_button("📄 Baixar PDF Completo", data=pdf_completo, file_name="relatorio_completo.pdf")
 
 # Gráfico: Distribuição por Modelo
 st.markdown("---")
