@@ -4,7 +4,7 @@ from PIL import Image
 from datetime import datetime
 from login import check_login
 from io import BytesIO
-from reportlab.lib.pagesizes import landscape, A4
+from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 import base64
@@ -120,8 +120,8 @@ st.dataframe(df_filtrado, use_container_width=True)
 # Botão para exportar PDF
 if st.button("Exportar Relatório em PDF"):
     buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=landscape(A4))
-    width, height = landscape(A4)
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
 
     # Inserir logos
     c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True)
@@ -143,7 +143,7 @@ if st.button("Exportar Relatório em PDF"):
     c.setFont("Helvetica", font_size)
 
     columns = list(df_filtrado.columns)
-    col_widths = [max(100 if col == "Descrição" else 60 for col in columns)] * len(columns)
+    col_widths = [100 if col == "Descrição" else 60 for col in columns]
 
     for i, col in enumerate(columns):
         c.drawString(x_offset + sum(col_widths[:i]), y_offset, col[:18])
@@ -157,7 +157,11 @@ if st.button("Exportar Relatório em PDF"):
             c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True)
             c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True)
         for i, col in enumerate(columns):
-            texto = str(row[col])[:60] if col == "Descrição" else str(row[col])[:20]
+            texto = str(row[col])
+            if col == "Descrição":
+                texto = (texto[:45] + "...") if len(texto) > 48 else texto
+            else:
+                texto = texto[:20]
             c.drawString(x_offset + sum(col_widths[:i]), y_offset, texto)
         y_offset -= row_height
 
