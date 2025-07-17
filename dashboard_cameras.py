@@ -147,19 +147,18 @@ def gerar_pdf(dados, nome="relatorio.pdf"):
     largura_coluna = 270 / len(colunas)
 
     for col in colunas:
-        pdf.cell(largura_coluna, 10, col, border=1)
+        pdf.cell(largura_coluna, 10, str(col)[:20], border=1)
     pdf.ln()
 
     for _, row in dados.iterrows():
         for item in row:
-            texto = str(item)
-            pdf.cell(largura_coluna, 10, texto[:20], border=1)
+            pdf.cell(largura_coluna, 10, str(item)[:20], border=1)
         pdf.ln()
 
-    pdf_output = pdf.output(dest='S').encode('latin1')  # <- CORREÇÃO AQUI
+    # Gera o conteúdo como string binária e coloca em buffer
+    pdf_output = pdf.output(dest='S').encode('latin1')
     buffer = BytesIO(pdf_output)
     return buffer
-
 
 # Gráfico: Distribuição por Modelo
 st.markdown("---")
