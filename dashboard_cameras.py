@@ -62,7 +62,7 @@ percent_on = round((on_cameras / total_cameras) * 100, 2)
 def card(title, value, color):
     st.markdown(
         f"""
-        <div style="background-color: {color}; padding: 10px; border-radius: 12px; text-align: center; color: white; font-weight: bold;">
+        <div style="background-color: {color}; padding: 12px; border-radius: 7px; text-align: center; color: white; font-weight: bold;">
             <h7 style="margin: 0;">{title}</7>
             <h4 style="margin: 0;">{value}</h4>
         </div>
