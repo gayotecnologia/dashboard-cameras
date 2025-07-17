@@ -155,9 +155,18 @@ buffer_fig2.seek(0)
 
 fig3, ax3 = plt.subplots(figsize=(10, 4))
 df["Dias de gravação"] = pd.to_numeric(df["Dias de gravação"], errors="coerce")
-df.dropna(subset=["Dias de gravação"], inplace=True)
-df.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax3, legend=False)
+df_dias = df.dropna(subset=["Dias de gravação"])
 
+if not df_dias.empty:
+    df_dias.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax3, legend=False)
+    ax3.set_title("Dias de Gravação por Câmera")
+else:
+    ax3.set_title("Sem dados válidos de Dias de Gravação")
+
+buffer_fig3 = BytesIO()
+plt.tight_layout()
+fig3.savefig(buffer_fig3, format='png')
+buffer_fig3.seek(0)
 
 # Botão de exportação PDF (somente filtrado)
 def gerar_pdf(dados, nome="relatorio.pdf"):
