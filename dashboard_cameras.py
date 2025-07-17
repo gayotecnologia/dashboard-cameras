@@ -91,24 +91,47 @@ with col5:
 
 
 # Tabela com filtro por status
-st.subheader("📋 Tabela de Câmeras")
-opcao_filtro = st.selectbox("Filtrar por funcionamento:", ["Todos", "Somente ON", "Somente OFF"])
-if opcao_filtro == "Somente ON":
-    df_filtrado = df[df["Em Funcionamento"] == "sim"]
-elif opcao_filtro == "Somente OFF":
-    df_filtrado = df[df["Em Funcionamento"] == "não"]
-else:
-    df_filtrado = df
-st.dataframe(df_filtrado, use_container_width=True)
+st.sidebar.header("🔍 Filtros avançados")
 
-# Gráfico: Distribuição por Modelo
-st.subheader("📦 Distribuição por Modelo")
-st.bar_chart(df["Modelo"].value_counts())
+# Status
+status_selecionado = st.sidebar.multiselect(
+    "Status da Câmera",
+    options=df["Em Funcionamento"].unique(),
+    default=df["Em Funcionamento"].unique()
+)
 
-# Gráfico: FPS por Câmera
-st.subheader("📈 FPS por Câmera")
-st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
+# Modelo da câmera
+modelos_selecionados = st.sidebar.multiselect(
+    "Modelo da Câmera",
+    options=sorted(df["Modelo"].dropna().unique()),
+    default=sorted(df["Modelo"].dropna().unique())
+)
 
-# Gráfico: Dias de Gravação por Câmera
-st.subheader("📊 Dias de Gravação por Câmera")
-st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
+# Gravando em disco
+gravando_selecionado = st.sidebar.multiselect(
+    "Gravando em Disco",
+    options=df["Gravando em Disco"].dropna().unique(),
+    default=df["Gravando em Disco"].dropna().unique()
+)
+
+# Dias de gravação
+dias_min, dias_max = int(df["Dias de gravação"].min()), int(df["Dias de gravação"].max())
+dias_gravacao = st.sidebar.slider("Dias de Gravação", min_value=dias_min, max_value=dias_max, value=(dias_min, dias_max))
+
+# Endereço
+endereco_texto = st.sidebar.text_input("Buscar por Endereço")
+
+# FPS mínimo (opcional)
+fps_min = st.sidebar.slider("FPS mínimo", min_value=0, max_value=int(df["FPS"].max()), value=0)
+
+# Aplicando os filtros
+df_filtrado = df[
+    (df["Em Funcionamento"].isin(status_selecionado)) &
+    (df["Modelo"].isin(modelos_selecionados)) &
+    (df["Gravando em Disco"].isin(gravando_selecionado)) &
+    (df["Dias de gravação"].between(*dias_gravacao)) &
+    (df["FPS"] >= fps_min)
+]
+
+if endereco_texto:
+    df_filtrado = df_filtrado[df_filtrado["Endereço"].str.contains(endereco_texto, case=False, na=False)]
