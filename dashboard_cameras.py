@@ -24,7 +24,7 @@ with col1:
     st.image(logo_esquerda, width=100)
 
 with col3:
-    st.image(logo_direita, width=100)
+    st.image(logo_direita, width=130)
 
 # Título
 st.markdown("<h3 style='text-align: center;'> Dashboard de câmeras - Atem Belém.</h3>", unsafe_allow_html=True)
