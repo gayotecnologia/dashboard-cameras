@@ -75,7 +75,7 @@ def card(title, value, color):
 st.markdown("## 📊 Visão Geral")
 col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
 with col1:
-    card("Total Câmeras", total_cameras, "#343a40")  # cinza escuro
+    card("Total de Câmeras", total_cameras, "#343a40")  # cinza escuro
 with col2:
     card("Câmeras ON", on_cameras, "#198754")  # verde
 with col3:
