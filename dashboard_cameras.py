@@ -156,6 +156,8 @@ if st.button("Exportar Relatório em PDF"):
             c.drawCentredString(x + col_widths[i]/2, y_offset, col[:18])
         elif col in ["Gravando em Disco", "FPS", "Disco Utilizado"]:
             c.drawRightString(x + col_widths[i], y_offset, col[:18])
+        elif col in ["Modelo", "Dias de gravação"]:
+            c.drawCentredString(x + col_widths[i]/2, y_offset, col[:18])
         else:
             c.drawString(x, y_offset, col[:18])
 
@@ -179,6 +181,9 @@ if st.button("Exportar Relatório em PDF"):
             elif col in ["Gravando em Disco", "FPS", "Disco Utilizado"]:
                 texto = texto[:20]
                 c.drawRightString(x + col_widths[i], y_offset, texto)
+            elif col in ["Modelo", "Dias de gravação"]:
+                texto = texto[:20]
+                c.drawCentredString(x + col_widths[i]/2, y_offset, texto)
             else:
                 texto = texto[:20]
                 c.drawString(x, y_offset, texto)
