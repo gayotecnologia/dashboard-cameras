@@ -10,10 +10,10 @@ check_login()
 col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
 with col_logo2:
     image = Image.open("logo.jpeg")
-    st.image(image, width=100)
+    st.image(image, width=60)
 
 # Título
-st.markdown("<h2 style='text-align: center;'>📹 Dashboard de Status das Câmeras</h2>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center;'>📹 Dashboard de Status das Câmeras</h3>", unsafe_allow_html=True)
 
 # Leitura do CSV
 try:
