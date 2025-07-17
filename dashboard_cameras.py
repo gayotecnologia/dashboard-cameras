@@ -119,5 +119,5 @@ st.subheader("📈 FPS por Câmera")
 st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
 
 # Gráfico: Dias de Gravação por Câmera
-st.subheader("📊 Dias de Gravação por Câmera")
+st.subheader("📊 Dias de Gravação")
 st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
