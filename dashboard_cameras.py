@@ -136,27 +136,6 @@ if modelo_filtro != "Todos":
 
 st.dataframe(df_filtrado, use_container_width=True)
 
-# Gráfico: Dias de Gravação por Câmera
-st.markdown("---")
-st.subheader("📊 Dias de Gravação por Câmera")
-
-# Converter coluna para numérico e limpar dados inválidos
-df_dias = df.copy()
-df_dias["Dias de gravação"] = pd.to_numeric(df_dias["Dias de gravação"], errors="coerce")
-df_dias = df_dias.dropna(subset=["Dias de gravação"])
-
-if not df_dias.empty:
-    fig3, ax3 = plt.subplots(figsize=(12, 4))
-    df_dias.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax3, legend=False)
-    ax3.set_title("Dias de Gravação por Câmera")
-    ax3.set_ylabel("Dias")
-    ax3.set_xlabel("Câmeras")
-    plt.xticks(rotation=90)
-    plt.tight_layout()
-    st.pyplot(fig3)
-else:
-    st.warning("⚠️ Nenhum dado válido para 'Dias de gravação'. Verifique o CSV.")
-
 # Botão de exportação PDF (somente filtrado)
 def gerar_pdf(dados, nome="relatorio.pdf"):
     pdf = FPDF(orientation='L', unit='mm', format='A4')
@@ -170,7 +149,7 @@ def gerar_pdf(dados, nome="relatorio.pdf"):
     pdf.ln(5)
 
     # Tabela
-    pdf.set_font("Arial", size=6)
+    pdf.set_font("Arial", size=5.5)
     colunas = dados.columns.tolist()
     largura_coluna = 270 / len(colunas)
 
