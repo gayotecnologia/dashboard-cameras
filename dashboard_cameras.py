@@ -7,8 +7,26 @@ if not check_login():
     st.stop()
 from PIL import Image
 
-logo = Image.open("logo.jpeg")
-st.image(logo, width=70)  # Ajuste o tamanho como preferir
+import base64
+from PIL import Image
+from io import BytesIO
+
+def imagem_base64(path):
+    img = Image.open(path)
+    buffer = BytesIO()
+    img.save(buffer, format="jpeg")
+    return base64.b64encode(buffer.getvalue()).decode()
+
+logo_base64 = imagem_base64("logo.jpeg")
+
+st.markdown(
+    f"""
+    <div style="text-align: center;">
+        <img src="data:image/jpeg;base64,{logo_base64}" width="80">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # Título
 st.markdown(
