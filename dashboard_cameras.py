@@ -1,13 +1,14 @@
 import streamlit as st
 import pandas as pd
 from PIL import Image
-from datetime import datetime
+from datetime import datetime, timedelta
 from login import check_login
 from io import BytesIO
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 import base64
+import pytz
 
 # Checa login antes de qualquer coisa
 check_login()
@@ -15,7 +16,7 @@ check_login()
 # Configura a página para ser responsiva
 st.set_page_config(layout="wide")
 
-# Carrega imagens das logos
+# Carrega imagens das logos (e redimensiona para tamanho adequado no PDF)
 logo_esquerda = Image.open("logo.jpeg")
 logo_direita = Image.open("atem.png")
 
@@ -123,27 +124,31 @@ if st.button("Exportar Relatório em PDF"):
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
-    # Inserir logos
-    c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True, mask='auto')
-    c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True, mask='auto')
+    # Inserir logos menores no PDF
+    logo_width = 60
+    logo_height = 30
+    c.drawImage(ImageReader(logo_esquerda), 40, height - logo_height - 20, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
+    c.drawImage(ImageReader(logo_direita), width - logo_width - 40, height - logo_height - 20, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
 
     # Título
     c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width / 2, height - 80, "Relatório de Câmeras - Atem Belém")
+    c.drawCentredString(width / 2, height - 70, "Relatório de Câmeras - Atem Belém")
 
-    # Data e hora
+    # Data e hora local (GMT-3)
+    fuso = pytz.timezone("America/Belem")
+    data_local = datetime.now(fuso).strftime("%d/%m/%Y %H:%M:%S")
     c.setFont("Helvetica", 10)
-    c.drawString(40, height - 100, "Data/Hora: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+    c.drawString(40, height - 90, "Data/Hora: " + data_local)
 
     # Tabela de dados
     x_offset = 40
-    y_offset = height - 130
+    y_offset = height - 120
     row_height = 12
     font_size = 6
     c.setFont("Helvetica", font_size)
 
     columns = list(df_filtrado.columns)
-    col_widths = [100 if col == "Descrição" else 60 for col in columns]
+    col_widths = [90 if col == "Descrição" else 50 for col in columns]
 
     for i, col in enumerate(columns):
         if col == "Ativado":
@@ -155,8 +160,8 @@ if st.button("Exportar Relatório em PDF"):
     for index, row in df_filtrado.iterrows():
         if y_offset < 40:
             c.showPage()
-            c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True, mask='auto')
-            c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True, mask='auto')
+            c.drawImage(ImageReader(logo_esquerda), 40, height - logo_height - 20, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
+            c.drawImage(ImageReader(logo_direita), width - logo_width - 40, height - logo_height - 20, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
             y_offset = height - 80
             c.setFont("Helvetica", font_size)
         for i, col in enumerate(columns):
