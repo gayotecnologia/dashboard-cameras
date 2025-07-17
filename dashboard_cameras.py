@@ -9,7 +9,7 @@ if not check_login():
 # ===== TOPO COM LOGO E TÍTULO =====
 col_logo = st.columns([1, 2, 1])
 with col_logo[1]:
-    st.image("logo.jpg", width=80)  # ajuste o nome conforme sua imagem
+    st.image("logo.jpeg", width=80)  # ajuste o nome conforme sua imagem
 st.markdown("<h3 style='text-align: center;'>Dashboard de Status das Câmeras</h3>", unsafe_allow_html=True)
 
 # ===== LEITURA DO CSV =====
