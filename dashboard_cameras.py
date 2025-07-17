@@ -9,10 +9,10 @@ if not check_login():
 
 # Exibir logo centralizada
 try:
-    logo = Image.open("logo.jpg")  # Altere para logo.png ou logo.jpeg se necessário
+    logo = Image.open("logo.jpeg")  # Altere para logo.png ou logo.jpeg se necessário
     col_logo = st.columns([1, 2, 1])
     with col_logo[1]:
-        st.image(logo, use_column_width=False, width=200)
+        st.image(logo, use_column_width=False, width=80)
 except Exception as e:
     st.warning("⚠️ Logo não foi carregada. Verifique o nome do arquivo e extensão.")
 
