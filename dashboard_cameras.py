@@ -7,7 +7,7 @@ if not check_login():
     st.stop()
 
 # Título
-st.title("📹 Dashboard de Status das Câmeras")
+st.title("📹 Câmeras Servidor 01 - Atem Belém.")
 
 # Leitura segura do CSV diretamente do repositório local
 try:
@@ -42,11 +42,20 @@ df_filtrado = df[
 ]
 
 # Métricas
+total_cameras = len(df_filtrado)
+cameras_on = df_filtrado["Em Funcionamento"].eq("sim").sum()
+cameras_off = df_filtrado["Em Funcionamento"].eq("não").sum()
+cameras_gravando = df_filtrado["Gravando em Disco"].eq("sim").sum()
+
+# Porcentagem de câmeras ON
+percent_on = (cameras_on / total_cameras) * 100 if total_cameras > 0 else 0
+
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total de Câmeras", len(df_filtrado))
-col2.metric("Câmeras ON", df_filtrado["Em Funcionamento"].eq("sim").sum())
-col3.metric("Câmeras OFF", df_filtrado["Em Funcionamento"].eq("não").sum())
-col4.metric("Câmeras Gravando", df_filtrado["Gravando em Disco"].eq("sim").sum())
+col1.metric("Total de Câmeras", total_cameras)
+col2.metric("Câmeras ON", cameras_on, f"{percent_on:.1f}%")
+col3.metric("Câmeras OFF", cameras_off)
+col4.metric("Câmeras Gravando", cameras_gravando)
+
 
 # Exibir tabela
 st.subheader("📋 Tabela Completa")
