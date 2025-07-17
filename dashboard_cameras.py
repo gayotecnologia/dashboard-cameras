@@ -2,8 +2,12 @@ import streamlit as st
 import pandas as pd
 from PIL import Image
 from login import check_login
+from datetime import datetime
+from io import BytesIO
+from fpdf import FPDF
+import matplotlib.pyplot as plt
+import seaborn as sns
 import base64
-import io
 
 # Checa login antes de qualquer coisa
 check_login()
@@ -11,51 +15,55 @@ check_login()
 # Configura a página para ser responsiva
 st.set_page_config(layout="wide")
 
-# Função para converter imagem para base64
-def image_to_base64(img_path, format='JPEG', size=(100, 100)):
-    img = Image.open(img_path).convert("RGB")
-    img = img.resize(size)
-    buffer = io.BytesIO()
-    img.save(buffer, format=format)
-    return base64.b64encode(buffer.getvalue()).decode()
+# Carrega imagens das logos
+logo_esquerda = Image.open("logo.jpeg")
+logo_direita = Image.open("atem.png")
 
-# Carrega imagens das logos em base64
-logo_esquerda_b64 = image_to_base64("logo.jpeg", format="JPEG")
-logo_direita_b64 = image_to_base64("atem.png", format="PNG")
-
-# Layout responsivo com HTML e CSS flex
-st.markdown(
-    f"""
-    <div style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        padding: 10px 0;
-    ">
-        <img src="data:image/jpeg;base64,{logo_esquerda_b64}" alt="Logo Esquerda" style="height: 60px; max-width: 45%;">
-        <img src="data:image/png;base64,{logo_direita_b64}" alt="Logo Direita" style="height: 60px; max-width: 45%;">
+# Layout com duas logos no topo responsivo
+st.markdown("""
+    <style>
+        @media only screen and (max-width: 600px) {
+            .logo-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .logo-container img {
+                height: 40px !important;
+                width: auto;
+            }
+        }
+        .logo-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo-container img {
+            height: 60px;
+            width: auto;
+        }
+    </style>
+    <div class="logo-container">
+        <img src="data:image/jpeg;base64,{0}" alt="Logo Esquerda">
+        <img src="data:image/png;base64,{1}" alt="Logo Direita">
     </div>
-    """,
-    unsafe_allow_html=True
-)
+""".format(
+    base64.b64encode(logo_esquerda.tobytes()).decode(),
+    base64.b64encode(logo_direita.tobytes()).decode()
+), unsafe_allow_html=True)
 
 # Título
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
 
 # Leitura do CSV
-try:
-    df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
-    colunas_esperadas = [
-        "Nome", "Em Funcionamento", "Endereço", "Descrição",
-        "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado"
-    ]
-    if not all(col in df.columns for col in colunas_esperadas):
-        st.error("❌ O CSV não possui todas as colunas esperadas.")
-        st.write("Colunas encontradas:", df.columns.tolist())
-        st.stop()
-except Exception as e:
-    st.error(f"Erro ao carregar o CSV: {e}")
+df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
+colunas_esperadas = [
+    "Nome", "Em Funcionamento", "Endereço", "Descrição",
+    "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado"
+]
+if not all(col in df.columns for col in colunas_esperadas):
+    st.error("❌ O CSV não possui todas as colunas esperadas.")
+    st.write("Colunas encontradas:", df.columns.tolist())
     st.stop()
 
 # Normalizar campos
@@ -95,7 +103,7 @@ with col4:
     card("Gravando", gravando, "#0d6efd")  # azul
 with col5:
     cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
-    card("Disponibilidade (%)", f"{percent_on}%", cor_percent)
+    card("Online (%)", f"{percent_on}%", cor_percent)
 
 # Filtro avançado
 st.markdown("---")
@@ -119,6 +127,43 @@ if modelo_filtro != "Todos":
     df_filtrado = df_filtrado[df_filtrado["Modelo"] == modelo_filtro]
 
 st.dataframe(df_filtrado, use_container_width=True)
+
+# Botão de exportação PDF
+def gerar_pdf(dados, nome="relatorio.pdf"):
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, f"Relatório de Câmeras - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", ln=True, align="C")
+    pdf.set_font("Arial", size=8)
+
+    colunas = dados.columns.tolist()
+    largura_coluna = 270 / len(colunas)
+
+    for col in colunas:
+        pdf.cell(largura_coluna, 10, col, border=1)
+    pdf.ln()
+
+    for _, row in dados.iterrows():
+        for item in row:
+            texto = str(item)
+            pdf.cell(largura_coluna, 10, texto[:20], border=1)
+        pdf.ln()
+
+    buffer = BytesIO()
+    pdf.output(buffer)
+    buffer.seek(0)
+    return buffer
+
+st.markdown("### 📤 Exportar Relatórios em PDF")
+col_exp1, col_exp2 = st.columns(2)
+with col_exp1:
+    if st.button("Exportar Dados Filtrados"):
+        pdf = gerar_pdf(df_filtrado)
+        st.download_button("📄 Baixar PDF Filtrado", data=pdf, file_name="relatorio_filtrado.pdf")
+with col_exp2:
+    if st.button("Exportar Todos os Dados"):
+        pdf = gerar_pdf(df)
+        st.download_button("📄 Baixar PDF Completo", data=pdf, file_name="relatorio_completo.pdf")
 
 # Gráfico: Distribuição por Modelo
 st.markdown("---")
