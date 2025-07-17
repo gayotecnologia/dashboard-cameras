@@ -7,7 +7,11 @@ if not check_login():
     st.stop()
 
 # Título
-st.title("📹 Câmeras Servidor 01 - Atem Belém.")
+st.markdown(
+    "<h2 style='text-align: left; color: black;'>📹 Dashboard de Status câmeras - Atem Belém</h2>",
+    unsafe_allow_html=True
+)
+
 
 # Leitura segura do CSV diretamente do repositório local
 try:
