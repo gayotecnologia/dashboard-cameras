@@ -5,6 +5,10 @@ from login import check_login
 # Verificação de login
 if not check_login():
     st.stop()
+from PIL import Image
+
+logo = Image.open("logo.png")
+st.image(logo, width=150)  # Ajuste o tamanho como preferir
 
 # Título
 st.markdown(
