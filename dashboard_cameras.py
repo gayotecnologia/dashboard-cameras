@@ -7,7 +7,7 @@ if not check_login():
     st.stop()
 from PIL import Image
 
-logo = Image.open("logo.png")
+logo = Image.open("logo.jpeg")
 st.image(logo, width=150)  # Ajuste o tamanho como preferir
 
 # Título
