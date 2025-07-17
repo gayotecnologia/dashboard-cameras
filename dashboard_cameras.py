@@ -7,12 +7,12 @@ from login import check_login
 if not check_login():
     st.stop()
 
-# === LOGO CENTRALIZADA COM TAMANHO AJUSTÁVEL ===
+# === LOGO CENTRALIZADA ===
 try:
-    logo = Image.open("logo.jpeg")  # Certifique-se de que o arquivo está no mesmo diretório
+    logo = Image.open("logo.jpeg")
     col_logo = st.columns([1, 2, 1])
     with col_logo[1]:
-        st.image(logo, width=80)  # Ajuste o tamanho da logo conforme necessário
+        st.image(logo, width=80)
 except Exception as e:
     st.warning("⚠️ Logo não carregada. Verifique o nome e o caminho do arquivo.")
 
@@ -48,19 +48,27 @@ gravando = df["Gravando em Disco"].eq("sim").sum()
 percent_online = (online / total) * 100 if total else 0
 
 # === CARTÕES ===
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
+
 with col1:
     st.markdown("### 🎯 Total")
     st.metric(label="", value=total)
+
 with col2:
     st.markdown("### ✅ Online")
-    st.metric(label=f"{percent_online:.1f}%", value=online)
+    st.metric(label="", value=online)
+
 with col3:
     st.markdown("### ❌ Offline")
     st.metric(label="", value=offline)
+
 with col4:
     st.markdown("### 💾 Gravando")
     st.metric(label="", value=gravando)
+
+with col5:
+    st.markdown("### 📶 % Online")
+    st.metric(label="", value=f"{percent_online:.1f}%")
 
 # === FILTROS ===
 with st.expander("🔎 Filtros"):
