@@ -123,9 +123,17 @@ if st.button("Exportar Relatório em PDF"):
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
+    # Recarregar as logos para o PDF
+    logo_esq_io = BytesIO()
+    logo_dir_io = BytesIO()
+    logo_esquerda.save(logo_esq_io, format='PNG')
+    logo_direita.save(logo_dir_io, format='PNG')
+    logo_esq_io.seek(0)
+    logo_dir_io.seek(0)
+
     # Inserir logos
-    c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True)
-    c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True)
+    c.drawImage(ImageReader(logo_esq_io), 40, height - 60, width=100, preserveAspectRatio=True, mask='auto')
+    c.drawImage(ImageReader(logo_dir_io), width - 140, height - 60, width=100, preserveAspectRatio=True, mask='auto')
 
     # Título
     c.setFont("Helvetica-Bold", 14)
@@ -134,6 +142,47 @@ if st.button("Exportar Relatório em PDF"):
     # Data e hora
     c.setFont("Helvetica", 10)
     c.drawString(40, height - 100, "Data/Hora: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+
+    # Tabela de dados
+    x_offset = 40
+    y_offset = height - 130
+    row_height = 12
+    font_size = 6
+    c.setFont("Helvetica", font_size)
+
+    columns = list(df_filtrado.columns)
+    col_widths = [90 if col == "Descrição" else 60 for col in columns]
+
+    # Cabeçalhos
+    for i, col in enumerate(columns):
+        c.drawString(x_offset + sum(col_widths[:i]), y_offset, col[:18])
+
+    # Linhas da tabela
+    y_offset -= row_height
+    for index, row in df_filtrado.iterrows():
+        if y_offset < 60:
+            c.showPage()
+            y_offset = height - 60
+            c.setFont("Helvetica", font_size)
+            c.drawImage(ImageReader(logo_esq_io), 40, height - 60, width=100, preserveAspectRatio=True, mask='auto')
+            c.drawImage(ImageReader(logo_dir_io), width - 140, height - 60, width=100, preserveAspectRatio=True, mask='auto')
+        for i, col in enumerate(columns):
+            texto = str(row[col])
+            if col == "Descrição":
+                texto = (texto[:40] + "...") if len(texto) > 43 else texto
+            else:
+                texto = texto[:20]
+            c.drawString(x_offset + sum(col_widths[:i]), y_offset, texto)
+        y_offset -= row_height
+
+    c.save()
+    st.download_button(
+        label="🔍 Baixar Relatório PDF",
+        data=buffer.getvalue(),
+        file_name="relatorio_cameras.pdf",
+        mime="application/pdf"
+    )
+
 
     # Tabela de dados
     x_offset = 40
