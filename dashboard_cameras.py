@@ -8,6 +8,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 import base64
+import pytz
 
 # Checa login antes de qualquer coisa
 check_login()
@@ -24,6 +25,10 @@ def pil_image_to_base64(img):
     buffer = BytesIO()
     img.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
+
+def get_brasilia_time():
+    fuso_brasilia = pytz.timezone("America/Sao_Paulo")
+    return datetime.now(fuso_brasilia)
 
 logo_esquerda_base64 = pil_image_to_base64(logo_esquerda)
 logo_direita_base64 = pil_image_to_base64(logo_direita)
@@ -133,7 +138,7 @@ if st.button("Exportar Relatório em PDF"):
 
     # Data e hora
     c.setFont("Helvetica", 10)
-    c.drawString(40, height - 100, "Data/Hora: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+    c.drawString(40, height - 100, "Data/Hora: " + get_brasilia_time().strftime("%d/%m/%Y %H:%M:%S"))
 
     # Tabela de dados
     x_offset = 40
@@ -143,7 +148,7 @@ if st.button("Exportar Relatório em PDF"):
     c.setFont("Helvetica", font_size)
 
     columns = list(df_filtrado.columns)
-    col_widths = [100 if col == "Descrição" else 60 for col in columns]
+    col_widths = [80 if col == "Descrição" else 60 for col in columns]
 
     for i, col in enumerate(columns):
         c.drawString(x_offset + sum(col_widths[:i]), y_offset, col[:18])
@@ -159,7 +164,7 @@ if st.button("Exportar Relatório em PDF"):
         for i, col in enumerate(columns):
             texto = str(row[col])
             if col == "Descrição":
-                texto = (texto[:35] + "...") if len(texto) > 38 else texto
+                texto = (texto[:25] + "...") if len(texto) > 28 else texto
             else:
                 texto = texto[:20]
             c.drawString(x_offset + sum(col_widths[:i]), y_offset, texto)
