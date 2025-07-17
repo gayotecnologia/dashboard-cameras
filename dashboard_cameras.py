@@ -135,7 +135,7 @@ if modelo_filtro != "Todos":
 
 st.dataframe(df_filtrado, use_container_width=True)
 
-# Botão de exportação PDF
+# Botão de exportação PDF (somente filtrado)
 def gerar_pdf(dados, nome="relatorio.pdf"):
     pdf = FPDF(orientation='L', unit='mm', format='A4')
     pdf.add_page()
@@ -147,18 +147,22 @@ def gerar_pdf(dados, nome="relatorio.pdf"):
     largura_coluna = 270 / len(colunas)
 
     for col in colunas:
-        pdf.cell(largura_coluna, 10, str(col)[:20], border=1)
+        pdf.cell(largura_coluna, 10, col[:20], border=1)
     pdf.ln()
 
     for _, row in dados.iterrows():
         for item in row:
-            pdf.cell(largura_coluna, 10, str(item)[:20], border=1)
+            texto = str(item)
+            pdf.cell(largura_coluna, 10, texto[:20], border=1)
         pdf.ln()
 
-    # Gera o conteúdo como string binária e coloca em buffer
     pdf_output = pdf.output(dest='S').encode('latin1')
     buffer = BytesIO(pdf_output)
     return buffer
+
+st.markdown("### 📤 Exportar Relatório Filtrado")
+pdf_filtrado = gerar_pdf(df_filtrado)
+st.download_button("📄 Baixar PDF Filtrado", data=pdf_filtrado, file_name="relatorio_filtrado.pdf")
 
 # Gráfico: Distribuição por Modelo
 st.markdown("---")
