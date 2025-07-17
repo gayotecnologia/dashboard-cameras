@@ -136,15 +136,23 @@ if modelo_filtro != "Todos":
 
 st.dataframe(df_filtrado, use_container_width=True)
 
-# Gráficos
-fig3, ax3 = plt.subplots(figsize=(10, 4))
-df.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax3, legend=False)
-ax3.set_title("Dias de Gravação por Câmera")
-plt.tight_layout()
+# Gráfico: Dias de Gravação por Câmera
 st.markdown("---")
 st.subheader("📊 Dias de Gravação por Câmera")
-st.pyplot(fig3)
 
+# Converter coluna para numérico e limpar dados inválidos
+df_dias = df.copy()
+df_dias["Dias de gravação"] = pd.to_numeric(df_dias["Dias de gravação"], errors="coerce")
+df_dias = df_dias.dropna(subset=["Dias de gravação"])
+
+fig3, ax3 = plt.subplots(figsize=(12, 4))
+df_dias.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax3, legend=False)
+ax3.set_title("Dias de Gravação por Câmera")
+ax3.set_ylabel("Dias")
+ax3.set_xlabel("Câmeras")
+plt.xticks(rotation=90)
+plt.tight_layout()
+st.pyplot(fig3)
 
 # Botão de exportação PDF (somente filtrado)
 def gerar_pdf(dados, nome="relatorio.pdf"):
