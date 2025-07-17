@@ -170,15 +170,17 @@ if st.button("Exportar Relatório em PDF"):
         for i, col in enumerate(columns):
             x = x_offset + sum(col_widths[:i])
             texto = str(row[col])
-            if col == "Descrição" and len(texto) > 29:
-                texto = texto[:29] + "..."
+            if col == "Descrição":
+                if len(texto) > 29:
+                    texto = texto[:29] + "..."
                 c.drawString(x + 2, y_offset, texto)
-            elif col == "Modelo" and len(texto) > 25:
-                texto = texto[:25] + "..."
+            elif col == "Modelo":
+                if len(texto) > 25:
+                    texto = texto[:25] + "..."
                 c.drawString(x + 2, y_offset, texto)
             elif col in ["Gravando em Disco", "FPS", "Disco Utilizado"]:
                 c.drawRightString(x + col_widths[i] - 2, y_offset, texto)
-            elif col in ["Modelo", "Dias de gravação"]:
+            elif col in ["Dias de gravação"]:
                 c.drawCentredString(x + col_widths[i]/2, y_offset, texto)
             else:
                 c.drawCentredString(x + col_widths[i]/2, y_offset, texto)
