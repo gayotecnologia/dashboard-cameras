@@ -63,8 +63,8 @@ def card(title, value, color):
     st.markdown(
         f"""
         <div style="background-color: {color}; padding: 13px; border-radius: 12px; text-align: center; color: white; font-weight: bold;">
-            <h5 style="margin: 0;">{title}</h5>
-            <h3 style="margin: 0;">{value}</h3>
+            <h7 style="margin: 0;">{title}</7>
+            <h4 style="margin: 0;">{value}</h4>
         </div>
         """,
         unsafe_allow_html=True
