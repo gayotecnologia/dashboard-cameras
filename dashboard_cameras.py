@@ -37,19 +37,44 @@ df["Em Funcionamento"] = df["Em Funcionamento"].str.lower().fillna("").str.strip
 df["Gravando em Disco"] = df["Gravando em Disco"].str.lower().fillna("").str.strip()
 
 # Métricas principais
-total = len(df)
-on = df["Em Funcionamento"].eq("sim").sum()
-off = df["Em Funcionamento"].eq("não").sum()
-gravando = df["Gravando em Disco"].eq("sim").sum()
-percentual_on = (on / total * 100) if total > 0 else 0
+# Cálculos
+total_cameras = len(df)
+on_cameras = df["Em Funcionamento"].eq("sim").sum()
+off_cameras = df["Em Funcionamento"].eq("não").sum()
+gravando = df["Gravando em Disco"].str.lower().eq("sim").sum()
+percent_on = round((on_cameras / total_cameras) * 100, 2)
 
-# Cartões
+# Função para criar cartões com cor
+def card(title, value, color):
+    st.markdown(
+        f"""
+        <div style="background-color: {color}; padding: 20px; border-radius: 10px; text-align: center; color: white; font-weight: bold;">
+            <h4 style="margin: 0;">{title}</h4>
+            <h2 style="margin: 0;">{value}</h2>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+# Layout com colunas
 col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("🎥 Total", total)
-col2.metric("✅ ON", on)
-col3.metric("❌ OFF", off)
-col4.metric("💾 Gravando", gravando)
-col5.metric("📊 % ON", f"{percentual_on:.1f}%")
+
+with col1:
+    card("Total de Câmeras", total_cameras, "#343a40")  # cinza escuro
+
+with col2:
+    card("Câmeras ON", on_cameras, "#198754")  # verde fixo
+
+with col3:
+    card("Câmeras OFF", off_cameras, "#dc3545")  # vermelho
+
+with col4:
+    cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
+    card("Online (%)", f"{percent_on}%", cor_percent)
+
+with col5:
+    card("Gravando", gravando, "#0d6efd")  # azul
+
 
 # Tabela com filtro por status
 st.subheader("📋 Tabela de Câmeras")
