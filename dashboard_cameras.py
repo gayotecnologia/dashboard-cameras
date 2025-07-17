@@ -10,7 +10,7 @@ check_login()
 col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
 with col_logo2:
     image = Image.open("logo.jpeg")
-    st.image(image, width=60)
+    st.image(image, width=50)
 
 # Título
 st.markdown("<h3 style='text-align: center;'>📹 Dashboard de Status das Câmeras</h3>", unsafe_allow_html=True)
@@ -48,7 +48,7 @@ percent_on = round((on_cameras / total_cameras) * 100, 2)
 def card(title, value, color):
     st.markdown(
         f"""
-        <div style="background-color: {color}; padding: 14px; border-radius: 8px; text-align: center; color: white; font-weight: bold;">
+        <div style="background-color: {color}; padding: 12px; border-radius: 8px; text-align: center; color: white; font-weight: bold;">
             <h6 style="margin: 0;">{title}</h6>
             <h4 style="margin: 0;">{value}</h4>
         </div>
