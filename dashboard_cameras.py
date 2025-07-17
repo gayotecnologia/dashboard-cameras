@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 from PIL import Image
 from login import check_login
-import base64
-import io
 
 # Checa login antes de qualquer coisa
 check_login()
@@ -11,23 +9,42 @@ check_login()
 # Configura a página para ser responsiva
 st.set_page_config(layout="wide")
 
-# Função para exibir imagem responsiva
-def exibir_imagem_base64(imagem_path, width=100):
-    try:
-        with open(imagem_path, "rb") as img_file:
-            img_bytes = img_file.read()
-            encoded = base64.b64encode(img_bytes).decode()
-            img_html = f'<img src="data:image/png;base64,{encoded}" style="max-width:{width}px; height:auto;">'
-            st.markdown(img_html, unsafe_allow_html=True)
-    except Exception as e:
-        st.error(f"Erro ao carregar a imagem {imagem_path}: {e}")
+# Carrega imagens das logos
+logo_esquerda = Image.open("logo.jpeg")
+logo_direita = Image.open("atem.png")
 
-# Layout com duas logos no topo (responsivo)
-col_logo_esq, col_logo_centro, col_logo_dir = st.columns([1, 6, 1])
-with col_logo_esq:
-    exibir_imagem_base64("logo.jpeg", width=100)
-with col_logo_dir:
-    exibir_imagem_base64("atem.png", width=100)
+# Logos adaptáveis para desktop e mobile
+st.markdown("""
+    <style>
+    .logo-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .logo {
+        max-height: 60px;
+        height: auto;
+        width: auto;
+    }
+    @media (max-width: 768px) {
+        .logo-container {
+            flex-direction: row;
+            justify-content: space-between;
+        }
+        .logo {
+            max-height: 40px;
+        }
+    }
+    </style>
+    <div class="logo-container">
+        <img src="data:image/jpeg;base64,{}" class="logo" />
+        <img src="data:image/png;base64,{}" class="logo" />
+    </div>
+    """.format(
+    st.image_to_bytes(logo_esquerda, format="JPEG"),
+    st.image_to_bytes(logo_direita, format="PNG")
+), unsafe_allow_html=True)
 
 # Título
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
@@ -75,7 +92,7 @@ def card(title, value, color):
 st.markdown("## 📊 Visão Geral")
 col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
 with col1:
-    card("Total de Câmeras", total_cameras, "#343a40")  # cinza escuro
+    card("Total Câmeras", total_cameras, "#343a40")  # cinza escuro
 with col2:
     card("Câmeras ON", on_cameras, "#198754")  # verde
 with col3:
@@ -84,7 +101,7 @@ with col4:
     card("Gravando", gravando, "#0d6efd")  # azul
 with col5:
     cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
-    card("Disponibilidade Online (%)", f"{percent_on}%", cor_percent)
+    card("Online (%)", f"{percent_on}%", cor_percent)
 
 # Filtro avançado
 st.markdown("---")
@@ -119,5 +136,5 @@ st.subheader("📈 FPS por Câmera")
 st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
 
 # Gráfico: Dias de Gravação por Câmera
-st.subheader("📊 Dias de Gravação")
+st.subheader("📊 Dias de Gravação por Câmera")
 st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
