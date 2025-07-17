@@ -1,86 +1,99 @@
+from PIL import Image
 import streamlit as st
 import pandas as pd
 from login import check_login
 
-# Verificação de login
 if not check_login():
     st.stop()
-from PIL import Image
 
-import base64
-from PIL import Image
-from io import BytesIO
-
-def imagem_base64(path):
-    img = Image.open(path)
-    buffer = BytesIO()
-    img.save(buffer, format="jpeg")
-    return base64.b64encode(buffer.getvalue()).decode()
-
-logo_base64 = imagem_base64("logo.jpeg")
-
+# 📌 Centralizar a logo
 st.markdown(
-    f"""
+    """
     <div style="text-align: center;">
-        <img src="data:image/jpeg;base64,{logo_base64}" width="80">
+        <img src="logo.jpeg" alt="Logo" width="80">
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# Título
+# 📌 Título centralizado
 st.markdown(
-    "<h3 style='text-align: left; color: black;'>📹 Dashboard de Status câmeras - Atem Belém</h3>",
- unsafe_allow_html=True
+    "<h3 style='text-align: center; color: black;'>📹 Dashboard de Status câmeras - Atem Belém</h3>",
+    unsafe_allow_html=True
 )
 
+# 🔁 Leitura do CSV
+df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
 
-# Leitura segura do CSV diretamente do repositório local
-try:
-    df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
-    df.columns = df.columns.str.strip()  # remove espaços nas colunas
-
-    colunas_esperadas = [
-        "Nome", "Em Funcionamento", "Endereço", "Descrição",
-        "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado"
-    ]
-    if not all(col in df.columns for col in colunas_esperadas):
-        st.error("❌ O CSV não possui todas as colunas esperadas.")
-        st.write("Colunas encontradas:", df.columns.tolist())
-        st.stop()
-
-except Exception as e:
-    st.error(f"Erro ao carregar o CSV: {e}")
-    st.stop()
-
-# Limpar e padronizar
+# ✅ Padronizar colunas
 df["Em Funcionamento"] = df["Em Funcionamento"].astype(str).str.strip().str.lower()
 df["Gravando em Disco"] = df["Gravando em Disco"].astype(str).str.strip().str.lower()
 
-# Filtros
-with st.sidebar:
-    st.header("🔎 Filtros")
-    modelos = st.multiselect("Modelo da Câmera", df["Modelo"].unique(), default=df["Modelo"].unique())
-    status = st.multiselect("Status de Funcionamento", ["sim", "não"], default=["sim", "não"])
+# 📊 Métricas
+total = len(df)
+on = df["Em Funcionamento"].eq("sim").sum()
+off = df["Em Funcionamento"].eq("não").sum()
+gravando = df["Gravando em Disco"].eq("sim").sum()
+porcentagem_on = (on / total) * 100 if total > 0 else 0
 
-df_filtrado = df[
-    df["Modelo"].isin(modelos) & df["Em Funcionamento"].isin(status)
-]
+# 🎨 Estilo das métricas como cartões lado a lado
+st.markdown("""
+<style>
+.metric-card {
+    background-color: #f1f3f6;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 1px 1px 10px rgba(0,0,0,0.1);
+    margin: 10px;
+}
+.metric-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+.metric-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #0078D4;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# Métricas
-total_cameras = len(df_filtrado)
-cameras_on = df_filtrado["Em Funcionamento"].eq("sim").sum()
-cameras_off = df_filtrado["Em Funcionamento"].eq("não").sum()
-cameras_gravando = df_filtrado["Gravando em Disco"].eq("sim").sum()
-
-# Porcentagem de câmeras ON
-percent_on = (cameras_on / total_cameras) * 100 if total_cameras > 0 else 0
-
+# 🔲 Layout com 4 colunas
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total de Câmeras", total_cameras)
-col2.metric("Câmeras ON", cameras_on, f"{percent_on:.1f}%")
-col3.metric("Câmeras OFF", cameras_off)
-col4.metric("Câmeras Gravando", cameras_gravando)
+with col1:
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div class='metric-title'>Total de Câmeras</div>
+        <div class='metric-value'>{total}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div class='metric-title'>Câmeras ON</div>
+        <div class='metric-value'>{on} ({porcentagem_on:.1f}%)</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div class='metric-title'>Câmeras OFF</div>
+        <div class='metric-value'>{off}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col4:
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div class='metric-title'>Gravando em Disco</div>
+        <div class='metric-value'>{gravando}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 
 # Exibir tabela
