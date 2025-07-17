@@ -8,12 +8,12 @@ if not check_login():
 from PIL import Image
 
 logo = Image.open("logo.jpeg")
-st.image(logo, width=150)  # Ajuste o tamanho como preferir
+st.image(logo, width=70)  # Ajuste o tamanho como preferir
 
 # Título
 st.markdown(
-    "<h2 style='text-align: left; color: black;'>📹 Dashboard de Status câmeras - Atem Belém</h2>",
-    unsafe_allow_html=True
+    "<h3 style='text-align: left; color: black;'>📹 Dashboard de Status câmeras - Atem Belém</h3>",
+ unsafe_allow_html=True
 )
 
 
