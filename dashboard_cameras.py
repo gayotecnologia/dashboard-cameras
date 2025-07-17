@@ -24,7 +24,7 @@ with col1:
     st.image(logo_esquerda, width=100)
 
 with col3:
-    st.image(logo_direita, width=300)
+    st.image(logo_direita, width=100)
 
 # Título
 st.markdown("<h3 style='text-align: center;'> Dashboard de câmeras - Atem Belém.</h3>", unsafe_allow_html=True)
@@ -64,7 +64,7 @@ def card(title, value, color):
         f"""
         <div style="background-color: {color}; padding: 13px; border-radius: 12px; text-align: center; color: white; font-weight: bold;">
             <h6 style="margin: 0;">{title}</h6>
-            <h4 style="margin: 0;">{value}</h4>
+            <h3 style="margin: 0;">{value}</h3>
         </div>
         """,
         unsafe_allow_html=True
