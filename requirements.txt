@@ -4,4 +4,3 @@ plotly
 fpdf
 matplotlib
 seaborn
-pyplot
