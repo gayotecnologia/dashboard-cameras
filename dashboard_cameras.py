@@ -16,9 +16,9 @@ logo_direita = Image.open("atem.png")
 # Layout com duas logos no topo responsivo
 col_logo_esq, col_logo_centro, col_logo_dir = st.columns([1, 6, 1])
 with col_logo_esq:
-    st.image(logo_esquerda, use_container_width=True)
+    st.image(logo_esquerda, width=80)
 with col_logo_dir:
-    st.image(logo_direita, use_container_width=True)
+    st.image(logo_direita, width=80)
 
 # Título
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
@@ -72,10 +72,10 @@ with col2:
 with col3:
     card("Câmeras OFF", off_cameras, "#dc3545")  # vermelho
 with col4:
+    card("Gravando", gravando, "#0d6efd")  # azul
+with col5:
     cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
     card("Online (%)", f"{percent_on}%", cor_percent)
-with col5:
-    card("Gravando", gravando, "#0d6efd")  # azul
 
 # Filtro avançado
 st.markdown("---")
