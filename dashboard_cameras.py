@@ -152,14 +152,7 @@ if st.button("Exportar Relatório em PDF"):
 
     for i, col in enumerate(columns):
         x = x_offset + sum(col_widths[:i])
-        if col == "Ativado":
-            c.drawCentredString(x + col_widths[i]/2, y_offset, col[:29])
-        elif col in ["Gravando em Disco", "FPS", "Disco Utilizado"]:
-            c.drawRightString(x + col_widths[i], y_offset, col[:29])
-        elif col in ["Modelo", "Dias de gravação"]:
-            c.drawCentredString(x + col_widths[i]/2, y_offset, col[:29])
-        else:
-            c.drawString(x, y_offset, col[:29])
+        c.drawCentredString(x + col_widths[i]/2, y_offset, col[:29])
 
     y_offset -= row_height
     for index, row in df_filtrado.iterrows():
@@ -169,24 +162,16 @@ if st.button("Exportar Relatório em PDF"):
             c.drawImage(ImageReader(logo_direita), width - logo_width - 40, height - logo_height - 20, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
             y_offset = height - 80
             c.setFont("Helvetica", font_size)
+            for i, col in enumerate(columns):
+                x = x_offset + sum(col_widths[:i])
+                c.drawCentredString(x + col_widths[i]/2, y_offset, col[:29])
+            y_offset -= row_height
+
         for i, col in enumerate(columns):
             x = x_offset + sum(col_widths[:i])
             texto = str(row[col])
-            if col == "Descrição":
-                texto = (texto[:29] + "...") if len(texto) > 29 else texto
-                c.drawString(x, y_offset, texto)
-            elif col == "Ativado":
-                texto = texto[:29].rjust(29)
-                c.drawRightString(x + col_widths[i], y_offset, texto)
-            elif col in ["Gravando em Disco", "FPS", "Disco Utilizado"]:
-                texto = texto[:29]
-                c.drawRightString(x + col_widths[i], y_offset, texto)
-            elif col in ["Modelo", "Dias de gravação"]:
-                texto = texto[:29]
-                c.drawCentredString(x + col_widths[i]/2, y_offset, texto)
-            else:
-                texto = texto[:29]
-                c.drawString(x, y_offset, texto)
+            texto = (texto[:29] + "...") if col == "Descrição" and len(texto) > 29 else texto[:29]
+            c.drawCentredString(x + col_widths[i]/2, y_offset, texto)
         y_offset -= row_height
 
     c.save()
