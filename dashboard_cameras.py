@@ -64,7 +64,7 @@ def card(title, value, color):
         f"""
         <div style="background-color: {color}; padding: 12px; border-radius: 7px; text-align: center; color: white; font-weight: bold;">
             <h7 style="margin: 0;">{title}</7>
-            <h5 style="margin: 0;">{value}</h5>
+            <h6 style="margin: 0;">{value}</h6>
         </div>
         """,
         unsafe_allow_html=True
