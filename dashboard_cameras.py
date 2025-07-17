@@ -113,6 +113,27 @@ with col5:
     cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
     card("Online (%)", f"{percent_on}%", cor_percent)
 
+# Gráficos
+st.markdown("---")
+st.markdown("### 📈 Gráficos")
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 4))
+sns.countplot(data=df, x="Em Funcionamento", ax=ax1)
+ax1.set_title("Funcionamento")
+sns.countplot(data=df, x="Gravando em Disco", ax=ax2)
+ax2.set_title("Gravando em Disco")
+df_grafico = df[["Nome", "Dias de gravação"]].dropna()
+try:
+    df_grafico["Dias de gravação"] = pd.to_numeric(df_grafico["Dias de gravação"], errors="coerce")
+    df_grafico = df_grafico.dropna(subset=["Dias de gravação"])
+    df_grafico = df_grafico.sort_values("Dias de gravação", ascending=False).head(10)
+    df_grafico.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax3, legend=False)
+    ax3.set_title("Top 10 Dias de Gravação")
+    ax3.set_xticklabels(ax3.get_xticklabels(), rotation=45, ha="right")
+except:
+    ax3.set_visible(False)
+
+st.pyplot(fig)
+
 # Filtro avançado
 st.markdown("---")
 st.subheader("📋 Tabela de Câmeras")
