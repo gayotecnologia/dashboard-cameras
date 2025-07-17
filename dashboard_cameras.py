@@ -4,9 +4,10 @@ from PIL import Image
 from datetime import datetime
 from login import check_login
 from io import BytesIO
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import landscape, A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+import base64
 
 # Checa login antes de qualquer coisa
 check_login()
@@ -18,10 +19,8 @@ st.set_page_config(layout="wide")
 logo_esquerda = Image.open("logo.jpeg")
 logo_direita = Image.open("atem.png")
 
-# Exibe as logos de forma responsiva
-import base64
+# Converter imagens para base64
 from io import BytesIO
-
 def pil_image_to_base64(img):
     buffer = BytesIO()
     img.save(buffer, format="PNG")
@@ -30,13 +29,13 @@ def pil_image_to_base64(img):
 logo_esquerda_base64 = pil_image_to_base64(logo_esquerda)
 logo_direita_base64 = pil_image_to_base64(logo_direita)
 
+# Exibe as logos de forma responsiva
 st.markdown(f"""
     <div style='display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0;'>
         <img src='data:image/png;base64,{logo_esquerda_base64}' style='height: 50px;'>
         <img src='data:image/png;base64,{logo_direita_base64}' style='height: 50px;'>
     </div>
 """, unsafe_allow_html=True)
-
 
 # Título
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
@@ -84,13 +83,13 @@ def card(title, value, color):
 st.markdown("## 📊 Visão Geral")
 col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
 with col1:
-    card("Total Câmeras", total_cameras, "#343a40")  # cinza escuro
+    card("Total Câmeras", total_cameras, "#343a40")
 with col2:
-    card("Câmeras ON", on_cameras, "#198754")  # verde
+    card("Câmeras ON", on_cameras, "#198754")
 with col3:
-    card("Câmeras OFF", off_cameras, "#dc3545")  # vermelho
+    card("Câmeras OFF", off_cameras, "#dc3545")
 with col4:
-    card("Gravando", gravando, "#0d6efd")  # azul
+    card("Gravando", gravando, "#0d6efd")
 with col5:
     cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
     card("Online (%)", f"{percent_on}%", cor_percent)
@@ -121,8 +120,8 @@ st.dataframe(df_filtrado, use_container_width=True)
 # Botão para exportar PDF
 if st.button("Exportar Relatório em PDF"):
     buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
+    c = canvas.Canvas(buffer, pagesize=landscape(A4))
+    width, height = landscape(A4)
 
     # Inserir logos
     c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True)
@@ -140,15 +139,14 @@ if st.button("Exportar Relatório em PDF"):
     x_offset = 40
     y_offset = height - 130
     row_height = 12
-    max_rows = 40
     font_size = 6
     c.setFont("Helvetica", font_size)
 
     columns = list(df_filtrado.columns)
-    col_widths = [65] * len(columns)
+    col_widths = [max(100 if col == "Descrição" else 60 for col in columns)] * len(columns)
 
     for i, col in enumerate(columns):
-        c.drawString(x_offset + sum(col_widths[:i]), y_offset, col[:12])
+        c.drawString(x_offset + sum(col_widths[:i]), y_offset, col[:18])
 
     y_offset -= row_height
     for index, row in df_filtrado.iterrows():
@@ -156,8 +154,10 @@ if st.button("Exportar Relatório em PDF"):
             c.showPage()
             y_offset = height - 60
             c.setFont("Helvetica", font_size)
+            c.drawImage(ImageReader(logo_esquerda), 40, height - 60, width=100, preserveAspectRatio=True)
+            c.drawImage(ImageReader(logo_direita), width - 140, height - 60, width=100, preserveAspectRatio=True)
         for i, col in enumerate(columns):
-            texto = str(row[col])[:20]
+            texto = str(row[col])[:60] if col == "Descrição" else str(row[col])[:20]
             c.drawString(x_offset + sum(col_widths[:i]), y_offset, texto)
         y_offset -= row_height
 
