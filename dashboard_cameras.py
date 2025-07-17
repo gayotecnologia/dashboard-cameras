@@ -145,6 +145,7 @@ st.markdown("---")
 st.subheader("📊 Dias de Gravação por Câmera")
 st.pyplot(fig3)
 
+
 # Botão de exportação PDF (somente filtrado)
 def gerar_pdf(dados, nome="relatorio.pdf"):
     pdf = FPDF(orientation='L', unit='mm', format='A4')
