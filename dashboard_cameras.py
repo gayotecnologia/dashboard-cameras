@@ -16,9 +16,9 @@ logo_direita = Image.open("atem.png")
 # Layout com duas logos no topo responsivo
 col_logo_esq, col_logo_centro, col_logo_dir = st.columns([1, 6, 1])
 with col_logo_esq:
-    st.image(logo_esquerda, use_column_width="auto")
+    st.image(logo_esquerda, use_container_width=True)
 with col_logo_dir:
-    st.image(logo_direita, use_column_width="auto")
+    st.image(logo_direita, use_container_width=True)
 
 # Título
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
