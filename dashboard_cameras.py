@@ -13,7 +13,7 @@ with col_logo2:
     st.image(image, width=50)
 
 # Título
-st.markdown("<h3 style='text-align: center;'>📹 Dashboard de Status das Câmeras</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center;'> Dashboard de câmeras - Atem Belém.</h3>", unsafe_allow_html=True)
 
 # Leitura do CSV
 try:
