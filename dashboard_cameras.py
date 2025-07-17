@@ -13,12 +13,13 @@ st.set_page_config(layout="wide")
 logo_esquerda = Image.open("logo.jpeg")
 logo_direita = Image.open("atem.png")
 
-# Layout com duas logos no topo responsivo
-col_logo_esq, col_logo_centro, col_logo_dir = st.columns([1, 6, 1])
-with col_logo_esq:
-    st.image(logo_esquerda, width=80)
-with col_logo_dir:
-    st.image(logo_direita, width=80)
+# Layout com duas logos no topo - responsivo com HTML e CSS flexível
+st.markdown("""
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        <img src="data:image/png;base64," style="height:80px; max-width: 100%;" alt="Logo Esquerda">
+        <img src="data:image/png;base64," style="height:80px; max-width: 100%;" alt="Logo Direita">
+    </div>
+    """, unsafe_allow_html=True)
 
 # Título
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
