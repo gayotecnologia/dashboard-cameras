@@ -74,7 +74,7 @@ def card(title, value, color):
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
-    card("Total de Câmeras", total_cameras, "#343a40")  # cinza escuro
+    card("Total Câmeras", total_cameras, "#343a40")  # cinza escuro
 
 with col2:
     card("Câmeras ON", on_cameras, "#198754")  # verde fixo
