@@ -151,10 +151,13 @@ if st.button("Exportar Relatório em PDF"):
     col_widths = [90 if col == "Descrição" else 50 for col in columns]
 
     for i, col in enumerate(columns):
+        x = x_offset + sum(col_widths[:i])
         if col == "Ativado":
-            c.drawCentredString(x_offset + sum(col_widths[:i]) + col_widths[i]/2, y_offset, col[:18])
+            c.drawCentredString(x + col_widths[i]/2, y_offset, col[:18])
+        elif col in ["Gravando em Disco", "FPS", "Disco Utilizado"]:
+            c.drawRightString(x + col_widths[i], y_offset, col[:18])
         else:
-            c.drawString(x_offset + sum(col_widths[:i]), y_offset, col[:18])
+            c.drawString(x, y_offset, col[:18])
 
     y_offset -= row_height
     for index, row in df_filtrado.iterrows():
@@ -165,14 +168,20 @@ if st.button("Exportar Relatório em PDF"):
             y_offset = height - 80
             c.setFont("Helvetica", font_size)
         for i, col in enumerate(columns):
+            x = x_offset + sum(col_widths[:i])
             texto = str(row[col])
             if col == "Descrição":
                 texto = (texto[:35] + "...") if len(texto) > 38 else texto
+                c.drawString(x, y_offset, texto)
             elif col == "Ativado":
                 texto = texto[:20].rjust(20)
+                c.drawRightString(x + col_widths[i], y_offset, texto)
+            elif col in ["Gravando em Disco", "FPS", "Disco Utilizado"]:
+                texto = texto[:20]
+                c.drawRightString(x + col_widths[i], y_offset, texto)
             else:
                 texto = texto[:20]
-            c.drawString(x_offset + sum(col_widths[:i]), y_offset, texto)
+                c.drawString(x, y_offset, texto)
         y_offset -= row_height
 
     c.save()
