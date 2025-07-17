@@ -82,12 +82,14 @@ with col2:
 with col3:
     card("Câmeras OFF", off_cameras, "#dc3545")  # vermelho
 
+with col5:
+    card("Gravando", gravando, "#0d6efd")  # azul
+    
 with col4:
     cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
     card("Online (%)", f"{percent_on}%", cor_percent)
 
-with col5:
-    card("Gravando", gravando, "#0d6efd")  # azul
+
 
 
 # Tabela com filtro por status
