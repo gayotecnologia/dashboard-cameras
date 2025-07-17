@@ -9,10 +9,10 @@ if not check_login():
 
 # === LOGO CENTRALIZADA COM TAMANHO AJUSTÁVEL ===
 try:
-    logo = Image.open("logo.jpeg")  # Altere conforme necessário
+    logo = Image.open("logo.jpeg")  # Certifique-se de que o arquivo está no mesmo diretório
     col_logo = st.columns([1, 2, 1])
     with col_logo[1]:
-        st.image(logo, width=80)  # ajuste aqui o tamanho da logo
+        st.image(logo, width=80)  # Ajuste o tamanho da logo conforme necessário
 except Exception as e:
     st.warning("⚠️ Logo não carregada. Verifique o nome e o caminho do arquivo.")
 
@@ -40,14 +40,14 @@ except Exception as e:
 df["Em Funcionamento"] = df["Em Funcionamento"].astype(str).str.lower().str.strip()
 df["Gravando em Disco"] = df["Gravando em Disco"].astype(str).str.lower().str.strip()
 
-# === MÉTRICAS (CARTÕES COM EMOJIS) ===
+# === MÉTRICAS ===
 total = len(df)
 online = df["Em Funcionamento"].eq("sim").sum()
 offline = df["Em Funcionamento"].eq("não").sum()
 gravando = df["Gravando em Disco"].eq("sim").sum()
 percent_online = (online / total) * 100 if total else 0
 
-# Layout de cartões
+# === CARTÕES ===
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.markdown("### 🎯 Total")
@@ -62,30 +62,25 @@ with col4:
     st.markdown("### 💾 Gravando")
     st.metric(label="", value=gravando)
 
-# === FILTROS (OPCIONAL) ===
+# === FILTROS ===
 with st.expander("🔎 Filtros"):
     modelos = st.multiselect("Modelo", options=df["Modelo"].unique(), default=df["Modelo"].unique())
     status_funcionamento = st.multiselect("Status de Funcionamento", ["sim", "não"], default=["sim", "não"])
-
     df_filtrado = df[
         (df["Modelo"].isin(modelos)) &
         (df["Em Funcionamento"].isin(status_funcionamento))
     ]
-else:
-    df_filtrado = df.copy()
 
 # === TABELA ===
 st.subheader("📋 Tabela Completa")
 st.dataframe(df_filtrado, use_container_width=True)
 
-# === GRÁFICO: DISTRIBUIÇÃO POR MODELO ===
+# === GRÁFICOS ===
 st.subheader("📊 Distribuição por Modelo")
 st.bar_chart(df_filtrado["Modelo"].value_counts())
 
-# === GRÁFICO: FPS POR CÂMERA ===
 st.subheader("📈 FPS por Câmera")
 st.line_chart(df_filtrado[["Nome", "FPS"]].set_index("Nome"))
 
-# === GRÁFICO: DIAS DE GRAVAÇÃO ===
 st.subheader("🗓️ Dias de Gravação")
 st.bar_chart(df_filtrado[["Nome", "Dias de gravação"]].set_index("Nome"))
