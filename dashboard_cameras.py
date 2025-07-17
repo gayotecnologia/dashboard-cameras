@@ -3,23 +3,23 @@ import pandas as pd
 from PIL import Image
 from login import check_login
 
-# Verificar login
+# Verificação de login
 if not check_login():
     st.stop()
 
-# Exibir logo centralizada
+# === LOGO CENTRALIZADA COM TAMANHO AJUSTÁVEL ===
 try:
-    logo = Image.open("logo.jpeg")  # Altere para logo.png ou logo.jpeg se necessário
+    logo = Image.open("logo.jpeg")  # Altere conforme necessário
     col_logo = st.columns([1, 2, 1])
     with col_logo[1]:
-        st.image(logo, use_column_width=False, width=80)
+        st.image(logo, width=80)  # ajuste aqui o tamanho da logo
 except Exception as e:
-    st.warning("⚠️ Logo não foi carregada. Verifique o nome do arquivo e extensão.")
+    st.warning("⚠️ Logo não carregada. Verifique o nome e o caminho do arquivo.")
 
-# Título centralizado
+# === TÍTULO CENTRALIZADO ===
 st.markdown("<h3 style='text-align: center;'>📊 Dashboard de Status das Câmeras</h3>", unsafe_allow_html=True)
 
-# Leitura do CSV
+# === LEITURA DO CSV ===
 try:
     df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
 
@@ -36,42 +36,56 @@ except Exception as e:
     st.error(f"Erro ao carregar o CSV: {e}")
     st.stop()
 
-# Padronizar dados
+# === PADRONIZAÇÃO ===
 df["Em Funcionamento"] = df["Em Funcionamento"].astype(str).str.lower().str.strip()
 df["Gravando em Disco"] = df["Gravando em Disco"].astype(str).str.lower().str.strip()
 
-# Métricas com ícones
+# === MÉTRICAS (CARTÕES COM EMOJIS) ===
 total = len(df)
-on = df["Em Funcionamento"].eq("sim").sum()
-off = df["Em Funcionamento"].eq("não").sum()
+online = df["Em Funcionamento"].eq("sim").sum()
+offline = df["Em Funcionamento"].eq("não").sum()
 gravando = df["Gravando em Disco"].eq("sim").sum()
+percent_online = (online / total) * 100 if total else 0
 
+# Layout de cartões
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("🎯 Total", total)
-col2.metric("✅ Online", on, f"{(on/total)*100:.1f}%", delta_color="normal")
-col3.metric("❌ Offline", off)
-col4.metric("💾 Gravando", gravando)
+with col1:
+    st.markdown("### 🎯 Total")
+    st.metric(label="", value=total)
+with col2:
+    st.markdown("### ✅ Online")
+    st.metric(label=f"{percent_online:.1f}%", value=online)
+with col3:
+    st.markdown("### ❌ Offline")
+    st.metric(label="", value=offline)
+with col4:
+    st.markdown("### 💾 Gravando")
+    st.metric(label="", value=gravando)
 
-# Filtros interativos (opcional)
+# === FILTROS (OPCIONAL) ===
 with st.expander("🔎 Filtros"):
     modelos = st.multiselect("Modelo", options=df["Modelo"].unique(), default=df["Modelo"].unique())
-    funcionando = st.multiselect("Status", options=["sim", "não"], default=["sim", "não"])
+    status_funcionamento = st.multiselect("Status de Funcionamento", ["sim", "não"], default=["sim", "não"])
 
     df_filtrado = df[
         (df["Modelo"].isin(modelos)) &
-        (df["Em Funcionamento"].isin(funcionando))
+        (df["Em Funcionamento"].isin(status_funcionamento))
     ]
+else:
+    df_filtrado = df.copy()
 
-# Tabela
+# === TABELA ===
 st.subheader("📋 Tabela Completa")
 st.dataframe(df_filtrado, use_container_width=True)
 
-# Gráficos
+# === GRÁFICO: DISTRIBUIÇÃO POR MODELO ===
 st.subheader("📊 Distribuição por Modelo")
 st.bar_chart(df_filtrado["Modelo"].value_counts())
 
+# === GRÁFICO: FPS POR CÂMERA ===
 st.subheader("📈 FPS por Câmera")
 st.line_chart(df_filtrado[["Nome", "FPS"]].set_index("Nome"))
 
+# === GRÁFICO: DIAS DE GRAVAÇÃO ===
 st.subheader("🗓️ Dias de Gravação")
 st.bar_chart(df_filtrado[["Nome", "Dias de gravação"]].set_index("Nome"))
