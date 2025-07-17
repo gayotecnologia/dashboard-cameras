@@ -3,7 +3,7 @@ import pandas as pd
 from PIL import Image
 from login import check_login
 import base64
-from io import BytesIO
+import io
 
 # Checa login antes de qualquer coisa
 check_login()
@@ -11,25 +11,23 @@ check_login()
 # Configura a página para ser responsiva
 st.set_page_config(layout="wide")
 
-# Função para converter imagem em base64
-@st.cache_data
-def image_to_base64(img_path):
-    img = Image.open(img_path)
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
+# Função para exibir imagem responsiva
+def exibir_imagem_base64(imagem_path, width=100):
+    try:
+        with open(imagem_path, "rb") as img_file:
+            img_bytes = img_file.read()
+            encoded = base64.b64encode(img_bytes).decode()
+            img_html = f'<img src="data:image/png;base64,{encoded}" style="max-width:{width}px; height:auto;">'
+            st.markdown(img_html, unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"Erro ao carregar a imagem {imagem_path}: {e}")
 
-# Caminhos das logos
-logo_esquerda_b64 = image_to_base64("logo.jpeg")
-logo_direita_b64 = image_to_base64("atem.png")
-
-# Layout de logos usando HTML responsivo
-st.markdown(f'''
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-        <img src="data:image/png;base64,{logo_esquerda_b64}" width="100" style="max-width: 100%; height: auto;" />
-        <img src="data:image/png;base64,{logo_direita_b64}" width="100" style="max-width: 100%; height: auto;" />
-    </div>
-''', unsafe_allow_html=True)
+# Layout com duas logos no topo (responsivo)
+col_logo_esq, col_logo_centro, col_logo_dir = st.columns([1, 6, 1])
+with col_logo_esq:
+    exibir_imagem_base64("logo.jpeg", width=100)
+with col_logo_dir:
+    exibir_imagem_base64("atem.png", width=100)
 
 # Título
 st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
