@@ -93,7 +93,7 @@ with col4:
     card("Gravando", gravando, "#0d6efd")
 with col5:
     cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
-    card("Online (%)", f"{percent_on}%", cor_percent)
+    card("Disponibilidade (%)", f"{percent_on}%", cor_percent)
 
 # Filtro avançado
 st.markdown("---")
