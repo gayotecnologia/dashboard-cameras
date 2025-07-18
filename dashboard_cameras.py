@@ -7,6 +7,7 @@ from io import BytesIO
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+from reportlab.lib import colors
 import base64
 import pytz
 
@@ -92,7 +93,7 @@ with col4:
     card("Gravando", gravando, "#0d6efd")
 with col5:
     cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
-    card("Disponibilidade (%)", f"{percent_on}%", cor_percent)
+    card("Online (%)", f"{percent_on}%", cor_percent)
 
 # Filtro avançado
 st.markdown("---")
@@ -124,25 +125,48 @@ if st.button("Exportar Relatório em PDF"):
     c = canvas.Canvas(buffer, pagesize=landscape(A4))
     width, height = landscape(A4)
 
-    # Inserir logos menores no PDF
     logo_width = 50
     logo_height = 25
     c.drawImage(ImageReader(logo_esquerda), 40, height - logo_height - 20, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
     c.drawImage(ImageReader(logo_direita), width - logo_width - 40, height - logo_height - 20, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
 
-    # Título
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(width / 2, height - 60, "Relatório de Câmeras - Atem Belém")
 
-    # Data e hora local (GMT-3)
     fuso = pytz.timezone("America/Belem")
     data_local = datetime.now(fuso).strftime("%d/%m/%Y %H:%M:%S")
     c.setFont("Helvetica", 10)
     c.drawString(40, height - 80, "Data/Hora: " + data_local)
 
-    # Tabela de dados
+    # Linha única com dados da visão geral com cores e centralizada
+    c.setFont("Helvetica-Bold", 8)
+    dados_gerais = [
+        ("Total Câmeras", total_cameras, colors.darkgray),
+        ("ON", on_cameras, colors.green),
+        ("OFF", off_cameras, colors.red),
+        ("Gravando", gravando, colors.blue),
+        ("Online (%)", f"{percent_on}%", colors.green if percent_on >= 95 else colors.red)
+    ]
+    textos_coloridos = []
+    total_largura = 0
+    for titulo, valor, cor in dados_gerais:
+        texto = f"{titulo}: {valor}   "
+        largura = c.stringWidth(texto, "Helvetica-Bold", 8)
+        textos_coloridos.append((texto, cor, largura))
+        total_largura += largura + 10
+
+    x_inicio = (width - total_largura) / 2
+    x = x_inicio
+    y_offset = height - 95
+    for texto, cor, largura in textos_coloridos:
+        c.setFillColor(cor)
+        c.drawString(x, y_offset, texto)
+        x += largura + 10
+    c.setFillColor(colors.black)
+
+    # Cabeçalho e dados da tabela
     x_offset = 40
-    y_offset = height - 100
+    y_offset -= 10
     row_height = 12
     font_size = 6
     c.setFont("Helvetica", font_size)
