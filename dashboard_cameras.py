@@ -131,6 +131,19 @@ st.dataframe(df_filtrado.style.set_properties(**{
     "text-align": "center"
 }).format({"Dias de gravação": "{:>}"}), use_container_width=True)
 
+# Botão de exportação
+st.markdown("\n### 📤 Exportar Relatório para PDF")
+
+if st.button("Exportar Relatório"):
+    from export_pdf import exportar_relatorio_pdf
+    pdf_data = exportar_relatorio_pdf(df_filtrado)
+    st.download_button(
+        label="📄 Baixar Relatório PDF",
+        data=pdf_data,
+        file_name=f"relatorio_cameras_{datetime.now().strftime('%Y-%m-%d')}.pdf",
+        mime="application/pdf"
+    )
+
 # Gráficos
 st.markdown("---")
 st.subheader("📈 Gráficos")
@@ -138,10 +151,11 @@ st.subheader("📈 Gráficos")
 # Gráfico 1: Dias de gravação por câmera
 fig1, ax1 = plt.subplots(figsize=(12, 4))
 df_dias = df_filtrado.dropna(subset=["Dias de gravação"])
-df_dias.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax1, legend=False, color="#0d6efd")
-plt.xticks(rotation=90)
-plt.title("Dias de Gravação por Câmera")
-st.pyplot(fig1)
+if not df_dias.empty:
+    df_dias.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax1, legend=False, color="#0d6efd")
+    plt.xticks(rotation=90)
+    plt.title("Dias de Gravação por Câmera")
+    st.pyplot(fig1)
 
 # Gráfico 2: Câmeras ON vs OFF
 fig2, ax2 = plt.subplots()
