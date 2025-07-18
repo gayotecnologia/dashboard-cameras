@@ -70,13 +70,17 @@ df["Em Funcionamento"] = df["Em Funcionamento"].str.lower().fillna("").str.strip
 df["Gravando em Disco"] = df["Gravando em Disco"].str.lower().fillna("").str.strip()
 df["Modelo"] = df["Modelo"].astype(str).str.slice(0, 15)  # Abreviar para 15 caracteres
 
-# Converter Tempo Inativo para dias, se estiver no formato HH:MM:SS
+# Converter Tempo Inativo para dias decimais
 def tempo_para_dias(valor):
     try:
-        h, m, s = map(int, valor.strip().split(":"))
-        return round((h * 3600 + m * 60 + s) / 86400, 2)
+        partes = valor.strip().split(":")
+        if len(partes) == 3:
+            h, m, s = map(int, partes)
+            return round((h * 3600 + m * 60 + s) / 86400, 2)
+        else:
+            return float(valor)
     except:
-        return valor
+        return float("nan")
 
 df["Tempo Inativo"] = df["Tempo Inativo"].astype(str).apply(tempo_para_dias)
 
@@ -161,6 +165,8 @@ st.subheader("📈 Gráficos")
 fig1, ax1 = plt.subplots(figsize=(12, 4))
 df_dias = df_filtrado.dropna(subset=["Dias de gravação"])
 if not df_dias.empty:
+    df_dias["Dias de gravação"] = pd.to_numeric(df_dias["Dias de gravação"], errors="coerce")
+    df_dias = df_dias.dropna(subset=["Dias de gravação"])
     df_dias.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax1, legend=False, color="#0d6efd")
     plt.xticks(rotation=90)
     plt.title("Dias de Gravação por Câmera")
