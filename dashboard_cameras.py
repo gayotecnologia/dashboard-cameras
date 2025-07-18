@@ -145,7 +145,7 @@ if st.button("Exportar Relatório em PDF"):
         ("ON", on_cameras, colors.green),
         ("OFF", off_cameras, colors.red),
         ("Gravando", gravando, colors.blue),
-        ("Online (%)", f"{percent_on}%", colors.green if percent_on >= 95 else colors.red)
+        ("Disponibilidade (%)", f"{percent_on}%", colors.green if percent_on >= 95 else colors.red)
     ]
     textos_coloridos = []
     total_largura = 0
