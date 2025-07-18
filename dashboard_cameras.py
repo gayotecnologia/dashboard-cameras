@@ -170,3 +170,4 @@ df_gravando = pd.Series({"Gravando": gravando, "Não Gravando": total_cameras - 
 df_gravando.plot(kind="bar", color=["#0d6efd", "#6c757d"], ax=ax3)
 plt.title("Gravando em Disco")
 st.pyplot(fig3)
+
