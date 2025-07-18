@@ -157,7 +157,7 @@ if st.button("Exportar Relatório em PDF"):
 
     x_inicio = (width - total_largura) / 2
     x = x_inicio
-    y_offset = height - 95
+    y_offset = height - 100  # Espaço extra aqui
     for texto, cor, largura in textos_coloridos:
         c.setFillColor(cor)
         c.drawString(x, y_offset, texto)
@@ -166,7 +166,7 @@ if st.button("Exportar Relatório em PDF"):
 
     # Cabeçalho e dados da tabela
     x_offset = 40
-    y_offset -= 10
+    y_offset -= 20  # Aumentar o espaço antes da tabela
     row_height = 12
     font_size = 6
     c.setFont("Helvetica", font_size)
