@@ -46,7 +46,7 @@ try:
     df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
     colunas_esperadas = [
         "Nome", "Em Funcionamento", "Endereço", "Descrição",
-        "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado"
+        "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado", "Tempo Inativo"
     ]
     if not all(col in df.columns for col in colunas_esperadas):
         st.error("❌ O CSV não possui todas as colunas esperadas.")
