@@ -151,25 +151,23 @@ if st.button("📄 Exportar Relatório em PDF"):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=landscape(A4))
 
-    # Adiciona logos
-    c.drawImage(ImageReader(logo_esquerda), 30, 530, width=100, height=40)
-    c.drawImage(ImageReader(logo_direita), 740, 530, width=100, height=40)
+    def desenhar_cabecalho_pdf(c):
+        c.drawImage(ImageReader(logo_esquerda), 30, 530, width=80, height=30, preserveAspectRatio=True)
+        c.drawImage(ImageReader(logo_direita), 740, 530, width=80, height=30, preserveAspectRatio=True)
+        c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(420, 520, "Relatório de Disponibilidade de Câmeras - Atem Belém")
 
-    # Título
-    c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(420, 520, "Relatório de Disponibilidade de Câmeras - Atem Belém")
+        y_header = 480
+        c.setFont("Helvetica-Bold", 8)
+        col_titles = ["Nome", "Funcionamento", "Descrição", "Modelo", "Gravando", "Dias Gravação", "Tempo Inativo (dias)"]
+        col_widths = [120, 80, 130, 100, 60, 70, 90]
+        for i, title in enumerate(col_titles):
+            c.drawString(sum(col_widths[:i]) + 30, y_header, title)
+        return y_header - 15, col_widths
 
-    # Cabeçalho da Tabela
-    y = 480
-    c.setFont("Helvetica-Bold", 8)
-    col_titles = ["Nome", "Funcionamento", "Descrição", "Modelo", "Gravando", "Dias Gravação", "Tempo Inativo (dias)"]
-    col_widths = [120, 80, 150, 100, 60, 70, 90]
-    for i, title in enumerate(col_titles):
-        c.drawString(sum(col_widths[:i]) + 30, y, title)
-
-    # Conteúdo da tabela
-    y -= 15
+    y, col_widths = desenhar_cabecalho_pdf(c)
     c.setFont("Helvetica", 7)
+
     for _, row in df_filtrado.iterrows():
         values = [
             str(row["Nome"][:30]),
@@ -181,17 +179,17 @@ if st.button("📄 Exportar Relatório em PDF"):
             f"{row['Tempo Inativo (dias)']} dias" if pd.notna(row['Tempo Inativo (dias)']) else ""
         ]
         for i, val in enumerate(values):
-            align_right = i == 6
+            x_pos = sum(col_widths[:i]) + 30
+            align_right = i == len(values) - 1
             if align_right:
-                string_width = c.stringWidth(val, "Helvetica", 7)
-                x_position = sum(col_widths[:i+1]) + 30 - string_width
+                c.drawRightString(x_pos + col_widths[i] - 5, y, val)
             else:
-                x_position = sum(col_widths[:i]) + 30
-            c.drawString(x_position, y, val)
+                c.drawString(x_pos, y, val)
         y -= 12
         if y < 40:
             c.showPage()
-            y = 530
+            y, col_widths = desenhar_cabecalho_pdf(c)
+            c.setFont("Helvetica", 7)
 
     c.save()
     buffer.seek(0)
