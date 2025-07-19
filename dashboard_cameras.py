@@ -11,6 +11,7 @@ from reportlab.lib import colors
 import base64
 import pytz
 import matplotlib.pyplot as plt
+import re
 
 # Checa login antes de qualquer coisa
 check_login()
@@ -73,14 +74,17 @@ df["Modelo"] = df["Modelo"].astype(str).str.slice(0, 15)  # Abreviar para 15 car
 # Converter Tempo Inativo para dias decimais
 def tempo_para_dias(valor):
     try:
-        partes = valor.strip().split(":")
-        if len(partes) == 3:
-            h, m, s = map(int, partes)
-            return round((h * 3600 + m * 60 + s) / 86400, 2)
+        match = re.search(r"(\d+)\s*Hora\(s\),\s*(\d+)\s*Minuto\(s\)\s*e\s*(\d+)\s*Segundo\(s\)", valor)
+        if match:
+            horas = int(match.group(1))
+            minutos = int(match.group(2))
+            segundos = int(match.group(3))
+            total_segundos = horas * 3600 + minutos * 60 + segundos
+            return round(total_segundos / 86400, 2)
         else:
-            return float(valor)
+            return 0.0
     except:
-        return float("nan")
+        return 0.0
 
 df["Tempo Inativo"] = df["Tempo Inativo"].astype(str).apply(tempo_para_dias)
 
@@ -145,7 +149,7 @@ st.dataframe(df_filtrado.style.set_properties(**{
 }).format({"Dias de gravação": "{:>}", "Tempo Inativo": "{:>}"}), use_container_width=True)
 
 # Botão de exportação
-st.markdown("\n### 📤 Exportar Relatório para PDF")
+st.markdown("\n### 📄 Exportar Relatório para PDF")
 
 if st.button("Exportar Relatório"):
     from export_pdf import exportar_relatorio_pdf
@@ -185,3 +189,14 @@ df_gravando = pd.Series({"Gravando": gravando, "Não Gravando": total_cameras - 
 df_gravando.plot(kind="bar", color=["#0d6efd", "#6c757d"], ax=ax3)
 plt.title("Gravando em Disco")
 st.pyplot(fig3)
+
+# Gráfico 4: Tempo Inativo em dias por câmera
+fig4, ax4 = plt.subplots(figsize=(12, 4))
+df_tempo = df_filtrado.dropna(subset=["Tempo Inativo"])
+df_tempo = df_tempo[df_tempo["Tempo Inativo"] > 0]
+if not df_tempo.empty:
+    df_tempo_sorted = df_tempo.sort_values("Tempo Inativo", ascending=False).head(20)
+    df_tempo_sorted.plot(x="Nome", y="Tempo Inativo", kind="bar", ax=ax4, legend=False, color="#dc3545")
+    plt.xticks(rotation=90)
+    plt.title("Top 20 Câmeras com Maior Tempo Inativo (em dias)")
+    st.pyplot(fig4)
