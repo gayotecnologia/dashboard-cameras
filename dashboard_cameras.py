@@ -137,7 +137,10 @@ elif opcao_filtro == "Somente OFF":
 if modelo_filtro != "Todos":
     df_filtrado = df_filtrado[df_filtrado["Modelo"] == modelo_filtro]
 
-st.dataframe(df_filtrado, use_container_width=True)
+st.dataframe(df_filtrado[[
+    "Nome", "Em Funcionamento", "Endereço", "Descrição", "Ativado", "Modelo",
+    "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado", "Tempo Inativo (dias)"
+]], use_container_width=True)
 
 # Exportar para PDF (mover para logo após a tabela)
 if st.button("📄 Exportar Relatório em PDF"):
