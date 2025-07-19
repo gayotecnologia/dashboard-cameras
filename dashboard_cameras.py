@@ -4,29 +4,18 @@ from PIL import Image
 from datetime import datetime, timedelta
 from login import check_login
 from io import BytesIO
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from reportlab.lib import colors
 import base64
 import pytz
-import matplotlib.pyplot as plt
-import re
 
 # Checa login antes de qualquer coisa
 check_login()
 
 # Configura a página para ser responsiva
 st.set_page_config(layout="wide")
-
-# Aplica fonte customizada via CSS
-st.markdown("""
-    <style>
-    html, body, [class*="css"]  {
-        font-family: 'Segoe UI', sans-serif;
-    }
-    </style>
-""", unsafe_allow_html=True)
 
 # Carrega imagens das logos (e redimensiona para tamanho adequado no PDF)
 logo_esquerda = Image.open("logo.jpeg")
@@ -59,9 +48,10 @@ try:
         "Nome", "Em Funcionamento", "Endereço", "Descrição",
         "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado", "Tempo Inativo"
     ]
-    for col in colunas_esperadas:
-        if col not in df.columns:
-            df[col] = ""
+    if not all(col in df.columns for col in colunas_esperadas):
+        st.error("❌ O CSV não possui todas as colunas esperadas.")
+        st.write("Colunas encontradas:", df.columns.tolist())
+        st.stop()
 except Exception as e:
     st.error(f"Erro ao carregar o CSV: {e}")
     st.stop()
@@ -69,24 +59,17 @@ except Exception as e:
 # Normalizar campos
 df["Em Funcionamento"] = df["Em Funcionamento"].str.lower().fillna("").str.strip()
 df["Gravando em Disco"] = df["Gravando em Disco"].str.lower().fillna("").str.strip()
-df["Modelo"] = df["Modelo"].astype(str).str.slice(0, 15)  # Abreviar para 15 caracteres
 
-# Converter Tempo Inativo para dias decimais
-def tempo_para_dias(valor):
+# Converter Tempo Inativo para dias
+def converter_tempo_para_dias(tempo_str):
     try:
-        match = re.search(r"(\d+)\s*Hora\(s\),\s*(\d+)\s*Minuto\(s\)\s*e\s*(\d+)\s*Segundo\(s\)", valor)
-        if match:
-            horas = int(match.group(1))
-            minutos = int(match.group(2))
-            segundos = int(match.group(3))
-            total_segundos = horas * 3600 + minutos * 60 + segundos
-            return round(total_segundos / 86400, 2)
-        else:
-            return 0.0
+        h, m, s = map(int, tempo_str.strip().split(":"))
+        total_dias = (h * 3600 + m * 60 + s) / 86400
+        return round(total_dias, 2)
     except:
-        return 0.0
+        return None
 
-df["Tempo Inativo"] = df["Tempo Inativo"].astype(str).apply(tempo_para_dias)
+df["Tempo Inativo (dias)"] = df["Tempo Inativo"].apply(converter_tempo_para_dias)
 
 # Cálculos
 total_cameras = len(df)
@@ -100,7 +83,7 @@ def card(title, value, color):
     st.markdown(
         f"""
         <div style="background-color: {color}; padding: 10px; border-radius: 10px; text-align: center;
-                    color: white; font-weight: bold; font-size: 18px; font-family: 'Segoe UI', sans-serif;">
+                    color: white; font-weight: bold; font-size: 18px;">
             <div style='font-size: 14px'>{title}</div>
             <div style='font-size: 22px'>{value}</div>
         </div>
@@ -121,7 +104,7 @@ with col4:
     card("Gravando", gravando, "#0d6efd")
 with col5:
     cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
-    card("Online (%)", f"{percent_on}%", cor_percent)
+    card("Disponibilidade (%)", f"{percent_on}%", cor_percent)
 
 # Filtro avançado
 st.markdown("---")
@@ -144,59 +127,19 @@ elif opcao_filtro == "Somente OFF":
 if modelo_filtro != "Todos":
     df_filtrado = df_filtrado[df_filtrado["Modelo"] == modelo_filtro]
 
-st.dataframe(df_filtrado.style.set_properties(**{
-    "text-align": "center"
-}).format({"Dias de gravação": "{:>}", "Tempo Inativo": "{:>}"}), use_container_width=True)
-
-# Botão de exportação
-st.markdown("\n### 📄 Exportar Relatório para PDF")
-
-if st.button("Exportar Relatório"):
-    from export_pdf import exportar_relatorio_pdf
-    pdf_data = exportar_relatorio_pdf(df_filtrado)
-    st.download_button(
-        label="📄 Baixar Relatório PDF",
-        data=pdf_data,
-        file_name=f"relatorio_cameras_{datetime.now().strftime('%Y-%m-%d')}.pdf",
-        mime="application/pdf"
-    )
+st.dataframe(df_filtrado, use_container_width=True)
 
 # Gráficos
 st.markdown("---")
-st.subheader("📈 Gráficos")
+st.subheader("🛆 Distribuição por Modelo")
+st.bar_chart(df["Modelo"].value_counts())
 
-# Gráfico 1: Dias de gravação por câmera
-fig1, ax1 = plt.subplots(figsize=(12, 4))
-df_dias = df_filtrado.copy()
-df_dias["Dias de gravação"] = pd.to_numeric(df_dias["Dias de gravação"], errors="coerce")
-df_dias = df_dias.dropna(subset=["Dias de gravação"])
-if not df_dias.empty:
-    df_dias.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax1, legend=False, color="#0d6efd")
-    plt.xticks(rotation=90)
-    plt.title("Dias de Gravação por Câmera")
-    st.pyplot(fig1)
+st.subheader("📈 FPS por Câmera")
+st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
 
-# Gráfico 2: Câmeras ON vs OFF
-fig2, ax2 = plt.subplots()
-df_estado = pd.Series({"ON": on_cameras, "OFF": off_cameras})
-df_estado.plot(kind="bar", color=["#198754", "#dc3545"], ax=ax2)
-plt.title("Câmeras ON x OFF")
-st.pyplot(fig2)
+st.subheader("📊 Dias de Gravação por Câmera")
+st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
 
-# Gráfico 3: Gravando vs Não gravando
-fig3, ax3 = plt.subplots()
-df_gravando = pd.Series({"Gravando": gravando, "Não Gravando": total_cameras - gravando})
-df_gravando.plot(kind="bar", color=["#0d6efd", "#6c757d"], ax=ax3)
-plt.title("Gravando em Disco")
-st.pyplot(fig3)
-
-# Gráfico 4: Tempo Inativo em dias por câmera
-fig4, ax4 = plt.subplots(figsize=(12, 4))
-df_tempo = df_filtrado.dropna(subset=["Tempo Inativo"])
-df_tempo = df_tempo[df_tempo["Tempo Inativo"] > 0]
-if not df_tempo.empty:
-    df_tempo_sorted = df_tempo.sort_values("Tempo Inativo", ascending=False).head(20)
-    df_tempo_sorted.plot(x="Nome", y="Tempo Inativo", kind="bar", ax=ax4, legend=False, color="#dc3545")
-    plt.xticks(rotation=90)
-    plt.title("Top 20 Câmeras com Maior Tempo Inativo (em dias)")
-    st.pyplot(fig4)
+st.subheader("📝 Top 20 Câmeras com Maior Tempo Inativo (em dias)")
+top_inativas = df[["Nome", "Tempo Inativo (dias)"]].dropna().sort_values(by="Tempo Inativo (dias)", ascending=False).head(20)
+st.bar_chart(top_inativas.set_index("Nome"))
