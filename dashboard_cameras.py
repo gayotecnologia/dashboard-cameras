@@ -167,10 +167,10 @@ st.subheader("📈 Gráficos")
 
 # Gráfico 1: Dias de gravação por câmera
 fig1, ax1 = plt.subplots(figsize=(12, 4))
-df_dias = df_filtrado.dropna(subset=["Dias de gravação"])
+df_dias = df_filtrado.copy()
+df_dias["Dias de gravação"] = pd.to_numeric(df_dias["Dias de gravação"], errors="coerce")
+df_dias = df_dias.dropna(subset=["Dias de gravação"])
 if not df_dias.empty:
-    df_dias["Dias de gravação"] = pd.to_numeric(df_dias["Dias de gravação"], errors="coerce")
-    df_dias = df_dias.dropna(subset=["Dias de gravação"])
     df_dias.plot(x="Nome", y="Dias de gravação", kind="bar", ax=ax1, legend=False, color="#0d6efd")
     plt.xticks(rotation=90)
     plt.title("Dias de Gravação por Câmera")
