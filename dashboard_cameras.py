@@ -157,6 +157,11 @@ if st.button("📄 Exportar Relatório em PDF"):
         c.setFont("Helvetica-Bold", 16)
         c.drawCentredString(420, 520, "Relatório de Disponibilidade de Câmeras - Atem Belém")
 
+        # Data e hora
+        data_atual = datetime.now().strftime("%d/%m/%Y %H:%M")
+        c.setFont("Helvetica", 8)
+        c.drawCentredString(420, 505, f"Gerado em: {data_atual}")
+
         y_header = 480
         c.setFont("Helvetica-Bold", 8)
         col_titles = ["Nome", "Funcionamento", "Descrição", "Modelo", "Gravando", "Dias Gravação", "Tempo Inativo (dias)"]
