@@ -72,7 +72,8 @@ def converter_tempo_para_dias(tempo_str):
                 h, m = map(int, h_m)
             elif len(h_m) == 1:
                 h = int(h_m[0])
-        return round((h * 3600 + m * 60 + s) / 86400, 2)
+        dias = round((h * 3600 + m * 60 + s) / 86400, 2)
+        return f"{dias} dias"
     except:
         return None
 
@@ -136,26 +137,7 @@ if modelo_filtro != "Todos":
 
 st.dataframe(df_filtrado, use_container_width=True)
 
-# Gráficos
-st.markdown("---")
-st.subheader("🛆 Distribuição por Modelo")
-st.bar_chart(df["Modelo"].value_counts())
-
-st.subheader("📈 FPS por Câmera")
-st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
-
-st.subheader("📊 Dias de Gravação por Câmera")
-st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
-
-st.subheader("📝 Top 20 Câmeras com Maior Tempo Inativo (em dias)")
-top_inativas = df[["Nome", "Tempo Inativo (dias)"]].dropna().sort_values(by="Tempo Inativo (dias)", ascending=False).head(20)
-if not top_inativas.empty:
-    st.bar_chart(top_inativas.set_index("Nome"))
-else:
-    st.info("Nenhuma câmera com tempo inativo registrado.")
-
-# Exportar para PDF
-st.markdown("---")
+# Exportar para PDF (mover para logo após a tabela)
 if st.button("📄 Exportar Relatório em PDF"):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=landscape(A4))
@@ -201,3 +183,23 @@ if st.button("📄 Exportar Relatório em PDF"):
     b64_pdf = base64.b64encode(buffer.read()).decode('utf-8')
     href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="relatorio_cameras.pdf">📥 Baixar PDF</a>'
     st.markdown(href, unsafe_allow_html=True)
+
+# Gráficos
+st.markdown("---")
+st.subheader("🛆 Distribuição por Modelo")
+st.bar_chart(df["Modelo"].value_counts())
+
+st.subheader("📈 FPS por Câmera")
+st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
+
+st.subheader("📊 Dias de Gravação por Câmera")
+st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
+
+st.subheader("📝 Top 20 Câmeras com Maior Tempo Inativo (em dias)")
+top_inativas = df[["Nome", "Tempo Inativo (dias)"]].dropna().copy()
+top_inativas["Tempo Inativo (dias)"] = top_inativas["Tempo Inativo (dias)"].str.replace(" dias", "").astype(float)
+top_inativas = top_inativas.sort_values(by="Tempo Inativo (dias)", ascending=False).head(20)
+if not top_inativas.empty:
+    st.bar_chart(top_inativas.set_index("Nome"))
+else:
+    st.info("Nenhuma câmera com tempo inativo registrado.")
