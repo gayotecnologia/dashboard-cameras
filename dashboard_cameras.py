@@ -61,23 +61,25 @@ df["Em Funcionamento"] = df["Em Funcionamento"].str.lower().fillna("").str.strip
 df["Gravando em Disco"] = df["Gravando em Disco"].str.lower().fillna("").str.strip()
 
 # Converter Tempo Inativo para dias
-def converter_tempo_para_dias(tempo_str):
+def converter_tempo_para_dias_v2(tempo_str):
     try:
-        partes = tempo_str.replace("Hora(s)", "").replace("Minuto(s)", "").replace("Segundo(s)", "").replace(",", "").split("e")
-        h, m, s = 0, 0, 0
-        if len(partes) == 2:
-            h_m = partes[0].strip().split()
-            s = int(partes[1].strip())
-            if len(h_m) == 2:
-                h, m = map(int, h_m)
-            elif len(h_m) == 1:
-                h = int(h_m[0])
-        dias = round((h * 3600 + m * 60 + s) / 86400, 2)
+        horas = minutos = segundos = 0
+        partes = tempo_str.split(',')
+        for parte in partes:
+            parte = parte.strip()
+            if "Hora" in parte:
+                horas = int(parte.split()[0])
+            elif "Minuto" in parte:
+                minutos = int(parte.split()[0])
+            elif "Segundo" in parte:
+                segundos = int(parte.split()[0])
+        total_segundos = horas * 3600 + minutos * 60 + segundos
+        dias = round(total_segundos / 86400, 2)
         return f"{dias} dias"
     except:
         return None
 
-df["Tempo Inativo (dias)"] = df["Tempo Inativo"].apply(converter_tempo_para_dias)
+df["Tempo Inativo (dias)"] = df["Tempo Inativo"].apply(converter_tempo_para_dias_v2)
 
 # Cálculos
 total_cameras = len(df)
