@@ -146,7 +146,7 @@ st.dataframe(df_filtrado_exibe[[
     "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado", "Tempo Inativo (dias)"
 ]], use_container_width=True)
 
-# Exportar para PDF (mover para logo após a tabela)
+# Exportar para PDF (logo após a tabela)
 if st.button("📄 Exportar Relatório em PDF"):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=landscape(A4))
