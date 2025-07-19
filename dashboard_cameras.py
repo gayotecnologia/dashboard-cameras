@@ -63,9 +63,16 @@ df["Gravando em Disco"] = df["Gravando em Disco"].str.lower().fillna("").str.str
 # Converter Tempo Inativo para dias
 def converter_tempo_para_dias(tempo_str):
     try:
-        h, m, s = map(int, tempo_str.strip().split(":"))
-        total_dias = (h * 3600 + m * 60 + s) / 86400
-        return round(total_dias, 2)
+        partes = tempo_str.replace("Hora(s)", "").replace("Minuto(s)", "").replace("Segundo(s)", "").replace(",", "").split("e")
+        h, m, s = 0, 0, 0
+        if len(partes) == 2:
+            h_m = partes[0].strip().split()
+            s = int(partes[1].strip())
+            if len(h_m) == 2:
+                h, m = map(int, h_m)
+            elif len(h_m) == 1:
+                h = int(h_m[0])
+        return round((h * 3600 + m * 60 + s) / 86400, 2)
     except:
         return None
 
@@ -142,4 +149,55 @@ st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
 
 st.subheader("📝 Top 20 Câmeras com Maior Tempo Inativo (em dias)")
 top_inativas = df[["Nome", "Tempo Inativo (dias)"]].dropna().sort_values(by="Tempo Inativo (dias)", ascending=False).head(20)
-st.bar_chart(top_inativas.set_index("Nome"))
+if not top_inativas.empty:
+    st.bar_chart(top_inativas.set_index("Nome"))
+else:
+    st.info("Nenhuma câmera com tempo inativo registrado.")
+
+# Exportar para PDF
+st.markdown("---")
+if st.button("📄 Exportar Relatório em PDF"):
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=landscape(A4))
+
+    # Adiciona logos
+    c.drawImage(ImageReader(logo_esquerda), 30, 530, width=100, height=40)
+    c.drawImage(ImageReader(logo_direita), 740, 530, width=100, height=40)
+
+    # Título
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(420, 520, "Relatório de Disponibilidade de Câmeras - Atem Belém")
+
+    # Cabeçalho da Tabela
+    y = 480
+    c.setFont("Helvetica-Bold", 8)
+    col_titles = ["Nome", "Funcionamento", "Descrição", "Modelo", "Gravando", "Dias Gravação", "Tempo Inativo (dias)"]
+    col_widths = [120, 80, 150, 100, 60, 70, 90]
+    for i, title in enumerate(col_titles):
+        c.drawString(sum(col_widths[:i]) + 30, y, title)
+
+    # Conteúdo da tabela
+    y -= 15
+    c.setFont("Helvetica", 7)
+    for _, row in df_filtrado.iterrows():
+        values = [
+            str(row["Nome"][:30]),
+            row["Em Funcionamento"],
+            str(row["Descrição"][:40]),
+            str(row["Modelo"][:20]),
+            row["Gravando em Disco"],
+            str(row["Dias de gravação"]),
+            str(row["Tempo Inativo (dias)"])
+        ]
+        for i, val in enumerate(values):
+            c.drawString(sum(col_widths[:i]) + 30, y, val)
+        y -= 12
+        if y < 40:
+            c.showPage()
+            y = 530
+
+    c.save()
+    buffer.seek(0)
+    b64_pdf = base64.b64encode(buffer.read()).decode('utf-8')
+    href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="relatorio_cameras.pdf">📥 Baixar PDF</a>'
+    st.markdown(href, unsafe_allow_html=True)
