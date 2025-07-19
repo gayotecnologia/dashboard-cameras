@@ -174,14 +174,20 @@ if st.button("📄 Exportar Relatório em PDF"):
         values = [
             str(row["Nome"][:30]),
             row["Em Funcionamento"],
-            str(row["Descrição"][:40]),
+            str(row["Descrição"][:26]),
             str(row["Modelo"][:20]),
             row["Gravando em Disco"],
             str(row["Dias de gravação"]),
             f"{row['Tempo Inativo (dias)']} dias" if pd.notna(row['Tempo Inativo (dias)']) else ""
         ]
         for i, val in enumerate(values):
-            c.drawString(sum(col_widths[:i]) + 30, y, val)
+            align_right = i == 6
+            if align_right:
+                string_width = c.stringWidth(val, "Helvetica", 7)
+                x_position = sum(col_widths[:i+1]) + 30 - string_width
+            else:
+                x_position = sum(col_widths[:i]) + 30
+            c.drawString(x_position, y, val)
         y -= 12
         if y < 40:
             c.showPage()
