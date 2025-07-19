@@ -75,7 +75,7 @@ def converter_tempo_para_dias_v2(tempo_str):
                 segundos = int(parte.split()[0])
         total_segundos = horas * 3600 + minutos * 60 + segundos
         dias = round(total_segundos / 86400, 2)
-        return f"{dias} dias"
+        return dias
     except:
         return None
 
@@ -137,7 +137,11 @@ elif opcao_filtro == "Somente OFF":
 if modelo_filtro != "Todos":
     df_filtrado = df_filtrado[df_filtrado["Modelo"] == modelo_filtro]
 
-st.dataframe(df_filtrado[[
+# Exibe a tabela com 'dias' sufixado
+df_filtrado_exibe = df_filtrado.copy()
+df_filtrado_exibe["Tempo Inativo (dias)"] = df_filtrado_exibe["Tempo Inativo (dias)"].apply(lambda x: f"{x} dias" if pd.notna(x) else "")
+
+st.dataframe(df_filtrado_exibe[[
     "Nome", "Em Funcionamento", "Endereço", "Descrição", "Ativado", "Modelo",
     "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado", "Tempo Inativo (dias)"
 ]], use_container_width=True)
@@ -174,7 +178,7 @@ if st.button("📄 Exportar Relatório em PDF"):
             str(row["Modelo"][:20]),
             row["Gravando em Disco"],
             str(row["Dias de gravação"]),
-            str(row["Tempo Inativo (dias)"])
+            f"{row['Tempo Inativo (dias)']} dias" if pd.notna(row['Tempo Inativo (dias)']) else ""
         ]
         for i, val in enumerate(values):
             c.drawString(sum(col_widths[:i]) + 30, y, val)
@@ -202,7 +206,6 @@ st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
 
 st.subheader("📝 Top 20 Câmeras com Maior Tempo Inativo (em dias)")
 top_inativas = df[["Nome", "Tempo Inativo (dias)"]].dropna().copy()
-top_inativas["Tempo Inativo (dias)"] = top_inativas["Tempo Inativo (dias)"].str.replace(" dias", "").astype(float)
 top_inativas = top_inativas.sort_values(by="Tempo Inativo (dias)", ascending=False).head(20)
 if not top_inativas.empty:
     st.bar_chart(top_inativas.set_index("Nome"))
