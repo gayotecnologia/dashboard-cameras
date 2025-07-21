@@ -75,7 +75,7 @@ def converter_tempo_para_dias_v2(tempo_str):
                 segundos = int(parte.split()[0])
         total_segundos = horas * 3600 + minutos * 60 + segundos
         dias = round(total_segundos / 86400, 2)
-        return f"{dias} dias"
+        return dias
     except:
         return None
 
@@ -137,51 +137,59 @@ elif opcao_filtro == "Somente OFF":
 if modelo_filtro != "Todos":
     df_filtrado = df_filtrado[df_filtrado["Modelo"] == modelo_filtro]
 
-st.dataframe(df_filtrado[[
+# Exibe a tabela com 'dias' sufixado
+df_filtrado_exibe = df_filtrado.copy()
+df_filtrado_exibe["Tempo Inativo (dias)"] = df_filtrado_exibe["Tempo Inativo (dias)"].apply(lambda x: f"{x} dias" if pd.notna(x) else "")
+
+st.dataframe(df_filtrado_exibe[[
     "Nome", "Em Funcionamento", "Endereço", "Descrição", "Ativado", "Modelo",
     "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado", "Tempo Inativo (dias)"
 ]], use_container_width=True)
 
-# Exportar para PDF (mover para logo após a tabela)
+# Exportar para PDF (logo após a tabela)
 if st.button("📄 Exportar Relatório em PDF"):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=landscape(A4))
 
-    # Adiciona logos
-    c.drawImage(ImageReader(logo_esquerda), 30, 530, width=100, height=40)
-    c.drawImage(ImageReader(logo_direita), 740, 530, width=100, height=40)
+    def desenhar_cabecalho_pdf(c):
+        c.drawImage(ImageReader(logo_esquerda), 30, 530, width=80, height=30, preserveAspectRatio=True)
+        c.drawImage(ImageReader(logo_direita), 740, 530, width=80, height=30, preserveAspectRatio=True)
+        c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(420, 520, "Relatório de Disponibilidade de Câmeras - Atem Belém")
 
-    # Título
-    c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(420, 520, "Relatório de Disponibilidade de Câmeras - Atem Belém")
+        y_header = 480
+        c.setFont("Helvetica-Bold", 8)
+        col_titles = ["Nome", "Funcionamento", "Descrição", "Modelo", "Gravando", "Dias Gravação", "Tempo Inativo (dias)"]
+        col_widths = [120, 80, 130, 100, 60, 70, 90]
+        for i, title in enumerate(col_titles):
+            c.drawString(sum(col_widths[:i]) + 30, y_header, title)
+        return y_header - 15, col_widths
 
-    # Cabeçalho da Tabela
-    y = 480
-    c.setFont("Helvetica-Bold", 8)
-    col_titles = ["Nome", "Funcionamento", "Descrição", "Modelo", "Gravando", "Dias Gravação", "Tempo Inativo (dias)"]
-    col_widths = [120, 80, 150, 100, 60, 70, 90]
-    for i, title in enumerate(col_titles):
-        c.drawString(sum(col_widths[:i]) + 30, y, title)
-
-    # Conteúdo da tabela
-    y -= 15
+    y, col_widths = desenhar_cabecalho_pdf(c)
     c.setFont("Helvetica", 7)
+
     for _, row in df_filtrado.iterrows():
         values = [
             str(row["Nome"][:30]),
             row["Em Funcionamento"],
-            str(row["Descrição"][:40]),
+            str(row["Descrição"][:26]),
             str(row["Modelo"][:20]),
             row["Gravando em Disco"],
             str(row["Dias de gravação"]),
-            str(row["Tempo Inativo (dias)"])
+            f"{row['Tempo Inativo (dias)']} dias" if pd.notna(row['Tempo Inativo (dias)']) else ""
         ]
         for i, val in enumerate(values):
-            c.drawString(sum(col_widths[:i]) + 30, y, val)
+            x_pos = sum(col_widths[:i]) + 30
+            align_right = i == len(values) - 1
+            if align_right:
+                c.drawRightString(x_pos + col_widths[i] - 5, y, val)
+            else:
+                c.drawString(x_pos, y, val)
         y -= 12
         if y < 40:
             c.showPage()
-            y = 530
+            y, col_widths = desenhar_cabecalho_pdf(c)
+            c.setFont("Helvetica", 7)
 
     c.save()
     buffer.seek(0)
@@ -202,7 +210,6 @@ st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
 
 st.subheader("📝 Top 20 Câmeras com Maior Tempo Inativo (em dias)")
 top_inativas = df[["Nome", "Tempo Inativo (dias)"]].dropna().copy()
-top_inativas["Tempo Inativo (dias)"] = top_inativas["Tempo Inativo (dias)"].str.replace(" dias", "").astype(float)
 top_inativas = top_inativas.sort_values(by="Tempo Inativo (dias)", ascending=False).head(20)
 if not top_inativas.empty:
     st.bar_chart(top_inativas.set_index("Nome"))
