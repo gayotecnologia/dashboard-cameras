@@ -152,11 +152,22 @@ if st.button("📄 Exportar Relatório em PDF"):
     c = canvas.Canvas(buffer, pagesize=landscape(A4))
 
     def desenhar_cabecalho_pdf(c):
+        # Logos
         c.drawImage(ImageReader(logo_esquerda), 30, 530, width=80, height=30, preserveAspectRatio=True)
         c.drawImage(ImageReader(logo_direita), 740, 530, width=80, height=30, preserveAspectRatio=True)
+
+        # Título centralizado
         c.setFont("Helvetica-Bold", 16)
         c.drawCentredString(420, 520, "Relatório de Disponibilidade de Câmeras - Atem Belém")
 
+        # >>>>>> ADIÇÃO: Data/Hora da exportação (centralizado) <<<<<<
+        fuso = pytz.timezone("America/Belem")
+        data_local = datetime.now(fuso).strftime("%d/%m/%Y %H:%M:%S")
+        c.setFont("Helvetica", 10)
+        c.drawCentredString(420, 505, f"Exportado em: {data_local}")
+        # -------------------------------------------------------------
+
+        # Cabeçalho da tabela
         y_header = 480
         c.setFont("Helvetica-Bold", 8)
         col_titles = ["Nome", "Funcionamento", "Descrição", "Modelo", "Gravando", "Dias Gravação", "Tempo Inativo (dias)"]
