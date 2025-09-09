@@ -1,229 +1,143 @@
-
-import streamlit as st
-import pandas as pd
-from PIL import Image
-from datetime import datetime, timedelta
-from login import check_login
-from io import BytesIO
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
-from reportlab.lib import colors
-import base64
-import pytz
-
-# Checa login antes de qualquer coisa
-check_login()
-
-# Configura a página para ser responsiva
-st.set_page_config(layout="wide")
-
-# Carrega imagens das logos (e redimensiona para tamanho adequado no PDF)
-logo_esquerda = Image.open("logo.jpeg")
-logo_direita = Image.open("atem.png")
-
-# Converter imagens para base64
-def pil_image_to_base64(img):
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    return base64.b64encode(buffer.getvalue()).decode()
-
-logo_esquerda_base64 = pil_image_to_base64(logo_esquerda)
-logo_direita_base64 = pil_image_to_base64(logo_direita)
-
-# Exibe as logos de forma responsiva
-st.markdown(f"""
-    <div style='display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0;'>
-        <img src='data:image/png;base64,{logo_esquerda_base64}' style='height: 40px;'>
-        <img src='data:image/png;base64,{logo_direita_base64}' style='height: 40px;'>
-    </div>
-""", unsafe_allow_html=True)
-
-# Título
-st.markdown("<h3 style='text-align: center;'>Disponibilidade de câmeras - Atem Belém</h3>", unsafe_allow_html=True)
-
-# Leitura do CSV
-try:
-    df = pd.read_csv("status_cameras.csv", sep="\t", encoding="utf-8")
-    colunas_esperadas = [
-        "Nome", "Em Funcionamento", "Endereço", "Descrição",
-        "Ativado", "Modelo", "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado", "Tempo Inativo"
-    ]
-    if not all(col in df.columns for col in colunas_esperadas):
-        st.error("❌ O CSV não possui todas as colunas esperadas.")
-        st.write("Colunas encontradas:", df.columns.tolist())
-        st.stop()
-except Exception as e:
-    st.error(f"Erro ao carregar o CSV: {e}")
-    st.stop()
-
-# Normalizar campos
-df["Em Funcionamento"] = df["Em Funcionamento"].str.lower().fillna("").str.strip()
-df["Gravando em Disco"] = df["Gravando em Disco"].str.lower().fillna("").str.strip()
-
-# Converter Tempo Inativo para dias
-def converter_tempo_para_dias_v2(tempo_str):
-    try:
-        horas = minutos = segundos = 0
-        partes = tempo_str.split(',')
-        for parte in partes:
-            parte = parte.strip()
-            if "Hora" in parte:
-                horas = int(parte.split()[0])
-            elif "Minuto" in parte:
-                minutos = int(parte.split()[0])
-            elif "Segundo" in parte:
-                segundos = int(parte.split()[0])
-        total_segundos = horas * 3600 + minutos * 60 + segundos
-        dias = round(total_segundos / 86400, 2)
-        return dias
-    except:
-        return None
-
-df["Tempo Inativo (dias)"] = df["Tempo Inativo"].apply(converter_tempo_para_dias_v2)
-
-# Cálculos
-total_cameras = len(df)
-on_cameras = df["Em Funcionamento"].eq("sim").sum()
-off_cameras = df["Em Funcionamento"].eq("não").sum()
-gravando = df["Gravando em Disco"].eq("sim").sum()
-percent_on = round((on_cameras / total_cameras) * 100, 2)
-
-# Função para criar cartões com cor
-def card(title, value, color):
-    st.markdown(
-        f"""
-        <div style="background-color: {color}; padding: 10px; border-radius: 10px; text-align: center;
-                    color: white; font-weight: bold; font-size: 18px;">
-            <div style='font-size: 14px'>{title}</div>
-            <div style='font-size: 22px'>{value}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-# Cartões com layout responsivo
-st.markdown("## 📊 Visão Geral")
-col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
-with col1:
-    card("Total Câmeras", total_cameras, "#343a40")
-with col2:
-    card("Câmeras ON", on_cameras, "#198754")
-with col3:
-    card("Câmeras OFF", off_cameras, "#dc3545")
-with col4:
-    card("Gravando", gravando, "#0d6efd")
-with col5:
-    cor_percent = "#198754" if percent_on >= 95 else "#dc3545"
-    card("Disponibilidade (%)", f"{percent_on}%", cor_percent)
-
-# Filtro avançado
-st.markdown("---")
-st.subheader("📋 Tabela de Câmeras")
-st.markdown("Use os filtros abaixo para refinar os resultados.")
-
-col_f1, col_f2 = st.columns(2)
-with col_f1:
-    opcao_filtro = st.selectbox("Filtrar por funcionamento:", ["Todos", "Somente ON", "Somente OFF"])
-with col_f2:
-    modelo_filtro = st.selectbox("Filtrar por modelo:", ["Todos"] + sorted(df["Modelo"].dropna().unique().tolist()))
-
-# Aplicar filtros
-df_filtrado = df.copy()
-if opcao_filtro == "Somente ON":
-    df_filtrado = df_filtrado[df_filtrado["Em Funcionamento"] == "sim"]
-elif opcao_filtro == "Somente OFF":
-    df_filtrado = df_filtrado[df_filtrado["Em Funcionamento"] == "não"]
-
-if modelo_filtro != "Todos":
-    df_filtrado = df_filtrado[df_filtrado["Modelo"] == modelo_filtro]
-
-# Exibe a tabela com 'dias' sufixado
-df_filtrado_exibe = df_filtrado.copy()
-df_filtrado_exibe["Tempo Inativo (dias)"] = df_filtrado_exibe["Tempo Inativo (dias)"].apply(lambda x: f"{x} dias" if pd.notna(x) else "")
-
-st.dataframe(df_filtrado_exibe[[
-    "Nome", "Em Funcionamento", "Endereço", "Descrição", "Ativado", "Modelo",
-    "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado", "Tempo Inativo (dias)"
-]], use_container_width=True)
-
-# Exportar para PDF (logo após a tabela)
-if st.button("📄 Exportar Relatório em PDF"):
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=landscape(A4))
-
-    def desenhar_cabecalho_pdf(c):
-        # Logos
-        c.drawImage(ImageReader(logo_esquerda), 30, 530, width=80, height=30, preserveAspectRatio=True)
-        c.drawImage(ImageReader(logo_direita), 740, 530, width=80, height=30, preserveAspectRatio=True)
-
-        # Título centralizado
-        c.setFont("Helvetica-Bold", 16)
-        c.drawCentredString(420, 520, "Relatório de Disponibilidade de Câmeras - Atem Belém")
-
-        # >>>>>> ADIÇÃO: Data/Hora da exportação (centralizado) <<<<<<
-        fuso = pytz.timezone("America/Belem")
-        data_local = datetime.now(fuso).strftime("%d/%m/%Y %H:%M:%S")
-        c.setFont("Helvetica", 10)
-        c.drawCentredString(420, 505, f"Exportado em: {data_local}")
-        # -------------------------------------------------------------
-
-        # Cabeçalho da tabela
-        y_header = 480
-        c.setFont("Helvetica-Bold", 8)
-        col_titles = ["Nome", "Funcionamento", "Descrição", "Modelo", "Gravando", "Dias Gravação", "Tempo Inativo (dias)"]
-        col_widths = [120, 80, 130, 100, 60, 70, 90]
-        for i, title in enumerate(col_titles):
-            c.drawString(sum(col_widths[:i]) + 30, y_header, title)
-        return y_header - 15, col_widths
-
-    y, col_widths = desenhar_cabecalho_pdf(c)
-    c.setFont("Helvetica", 7)
-
-    for _, row in df_filtrado.iterrows():
-        values = [
-            str(row["Nome"][:30]),
-            row["Em Funcionamento"],
-            str(row["Descrição"][:26]),
-            str(row["Modelo"][:20]),
-            row["Gravando em Disco"],
-            str(row["Dias de gravação"]),
-            f"{row['Tempo Inativo (dias)']} dias" if pd.notna(row['Tempo Inativo (dias)']) else ""
-        ]
-        for i, val in enumerate(values):
-            x_pos = sum(col_widths[:i]) + 30
-            align_right = i == len(values) - 1
-            if align_right:
-                c.drawRightString(x_pos + col_widths[i] - 5, y, val)
-            else:
-                c.drawString(x_pos, y, val)
-        y -= 12
-        if y < 40:
-            c.showPage()
-            y, col_widths = desenhar_cabecalho_pdf(c)
-            c.setFont("Helvetica", 7)
-
-    c.save()
-    buffer.seek(0)
-    b64_pdf = base64.b64encode(buffer.read()).decode('utf-8')
-    href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="relatorio_cameras.pdf">📥 Baixar PDF</a>'
-    st.markdown(href, unsafe_allow_html=True)
-
-# Gráficos
-st.markdown("---")
-st.subheader("🛆 Distribuição por Modelo")
-st.bar_chart(df["Modelo"].value_counts())
-
-st.subheader("📈 FPS por Câmera")
-st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
-
-st.subheader("📊 Dias de Gravação por Câmera")
-st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
-
-st.subheader("📝 Top 20 Câmeras com Maior Tempo Inativo (em dias)")
-top_inativas = df[["Nome", "Tempo Inativo (dias)"]].dropna().copy()
-top_inativas = top_inativas.sort_values(by="Tempo Inativo (dias)", ascending=False).head(20)
-if not top_inativas.empty:
-    st.bar_chart(top_inativas.set_index("Nome"))
-else:
-    st.info("Nenhuma câmera com tempo inativo registrado.")
+Nome	Em Funcionamento	Endereço	Descrição	Ativado	Modelo	Tempo Inativo	Dias de gravação	Gravando em Disco	FPS	Disco Utilizado
+CAM-001	Sim	172.16.2.1	CAM-001 DATA CENTER DO CCOS	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	4 TB
+CAM-002	Sim	172.16.2.2	CAM-002 SALA DE MONITORAMENTO	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-003	Sim	172.16.2.3	CAM-003 LABORATORIO	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	4 TB
+CAM-004	Sim	172.16.2.4	CAM-004 CORREDOR ADM	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	4 TB
+CAM-005	Sim	172.16.2.5	CAM-005 ADMINISTRATIVO I	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-006	Sim	172.16.2.6	CAM-006 SALA DO TI	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	1 TB
+CAM-007	Sim	172.16.2.7	CAM-007 ADMINISTRATIVO II	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-008	Sim	172.16.2.8	CAM-008 ACESSO PREDIO MOTORISTAS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	4 TB
+CAM-009	Sim	172.16.2.9	CAM-009 AVENIDA PRINCIPAL ADM	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-010	Sim	172.16.2.10	CAM-010 PRÉDIO ADMINISTRATIVO	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	1 TB
+CAM-011	Sim	172.16.2.11	CAM-011 CERCA AGROPALMA I PRÉDIO ADM	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	3 TB
+CAM-012	Sim	172.16.2.12	CAM-012 CERCA AGROPALMA II PRÉDIO ADM	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	4 TB
+CAM-013	Sim	172.16.2.13	CAM-013 PORTÃO DE EMERGÊNCIA	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	2 TB
+CAM-014	Sim	172.16.2.14	CAM-014 SUBESTAÇÃO I E ÁREA EXTERNA	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	4 TB
+CAM-015	Sim	172.16.2.15	CAM-015 VIA EXTERNA II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	4 TB
+CAM-016	Sim	172.16.2.16	CAM-016 SPEED AREA EXTERNA II	Sim	Intelbras VIP 7425 SD IA FT	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	12	4 TB
+CAM-017	Sim	172.16.2.17	CAM-017 VIA EXTERNA III	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	4 TB
+CAM-018	Sim	172.16.2.18	CAM-018 VIA EXTERNA IV	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-019	Sim	172.16.2.19	CAM-019 VIA EXTERNA V	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	1 TB
+CAM-020	Sim	172.16.2.20	CAM-020 VIA EXTERNA VI	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	1 TB
+CAM-021	Sim	172.16.2.21	CAM-021 ENTRADA PRINCIPAL	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-022	Sim	172.16.2.22	CAM-022 TORNIQUETE PEDESTRE ENTRADA	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-023	Sim	172.16.2.23	CAM-023 RECEPÇÃO I	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	1 TB
+CAM-024	Sim	172.16.2.24	CAM-024 SALA DE TREINAMENTO	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	2 TB
+CAM-025	Não	172.16.2.25	CAM-025 ENTRADA PEDESTRE EXTERNA	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 8 Minuto(s) e 52 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Não	0	266 GB
+CAM-026	Sim	172.16.2.26	CAM-026 ACESSO RECEPÇÃO	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	680 GB
+CAM-027	Sim	172.16.2.27	CAM-027 ENTRADA PEDESTRE INTERNA	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	295 GB
+CAM-029	Sim	172.16.2.29	CAM-029 LPR ENTRADA PRINCIPAL	Sim	Intelbras VIP 7250 LPR IA FTG2	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	24	1 TB
+CAM-030	Sim	172.16.2.30	CAM-030 LPR SAIDA PRINCIPAL	Sim	Intelbras VIP 7250 LPR IA FTG2	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	24	3 TB
+CAM-031	Sim	172.16.2.133	CAM-031 A/B PER (SAIDA DE VEÍCULOS)	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	175 Dia(s) e 4,7 Hora(s)	Sim	9	1 TB
+CAM-032	Sim	172.16.2.32	CAM-032 SAIDA VEICULAR PRINCIPAL	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-033	Sim	172.16.2.33	CAM-033 ESTACIONAMENTO TERRENO	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	11	1 TB
+CAM-034	Sim	172.16.2.34	CAM-034 GUARITA AGP	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	1 TB
+CAM-035	Sim	172.16.2.35	CAM-035 FATURAMENTO	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-036	Sim	172.16.2.36	CAM-036 PERIMETRO BALANÇA I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-037	Sim	172.16.2.37	CAM-037 SPEED PORTARIA	Sim	Intelbras VIP 5232 SD IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-038	Sim	172.16.2.38	CAM-038 AV. PRINCIPAL	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-039	Sim	172.16.2.39	CAM-039 DRIVE-IN	Sim	Hikvision DS-2CD2142FWD-I	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	2 TB
+CAM-040	Sim	172.16.2.40	CAM-040 SALA DE DEPOSITO	Sim	Intelbras VIP 5550 DZ IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	965 GB
+CAM-041	Sim	172.16.2.41	CAM-041 ACESSO AVENIDA ADM E BALANÇA	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	2 TB
+CAM-042	Sim	172.16.2.42	CAM-042 ENTRADA VEICULAR PRINCIPAL	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	2 TB
+CAM-043	Sim	172.16.2.132	CAM-043 A/B PER (PORTARIA)	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	175 Dia(s) e 3,7 Hora(s)	Sim	9	1 TB
+CAM-044	Sim	172.16.2.138	CAM-044 A/B - PER (ENTRE PORTÕES 2 E 3)	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	173 Dia(s) e 15,7 Hora(s)	Sim	9	3 TB
+CAM-045	Sim	172.16.2.45	CAM-045 PERIMETRO BALANÇA II	Sim	Hikvision DS-2CD3656G2-IZS	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	2 TB
+CAM-046	Sim	172.16.2.46	CAM-046 ACESSO AO GALPOES	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	2 TB
+CAM-047	Sim	172.16.2.47	CAM-047 SPEED AREA DA BALANCA	Sim	Intelbras VIP 7425 SD IA FT	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	5 TB
+CAM-048	Sim	172.16.2.48	CAM-048 ACESSO ADM I	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	1 TB
+CAM-049	Sim	172.16.2.49	CAM-049 ACESSO ADM II	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	107 Dia(s) e 10,7 Hora(s)	Sim	9	991 GB
+CAM-050	Sim	172.16.2.50	CAM-050 SPEED ENTRADA OPERAÇÃO	Sim	Intelbras VIP 7425 SD IA FT	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	11	5 TB
+CAM-051	Sim	172.16.2.51	CAM-051 CERCA AGROPALMA II PRÉDIO ADM	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-052	Sim	172.16.2.52	CAM-052 AREA DA FILA DE CTS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-053	Sim	172.16.2.53	CAM-053 ENTRADA PLATAFORMAS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	2 TB
+CAM-054	Não	172.16.2.54	CAM-054 LPR ENTRADA PLATAFORMAS	Sim	Intelbras VIP 7250 LPR IA FTG2	0 Hora(s), 8 Minuto(s) e 47 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Não	0	657 GB
+CAM-055	Sim	172.16.2.55	CAM-055 LPR SAIDA PLATAFORMA	Sim	Intelbras VIP 7250 LPR IA FTG2	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	2 TB
+CAM-056	Sim	172.16.2.56	CAM-056 ENTRADA PLATAFORMAS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	2 TB
+CAM-057	Sim	172.16.2.57	CAM-057 PATIO DE ESPERA DE CTS I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	8	1 TB
+CAM-058	Sim	172.16.2.58	CAM-058 PATIO DE ESPERA DE CTS II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	2 TB
+CAM-059	Sim	172.16.2.59	CAM-059 SUBESTAÇÃO II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	2 TB
+CAM-060	Sim	172.16.2.60	CAM-060 GERADOR SUBESTAÇÃO II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	11	2 TB
+CAM-061	Sim	172.16.2.61	CAM-061 TQ 21 (AGUA)	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	2 TB
+CAM-062	Sim	172.16.2.62	CAM-062 TANQUE 21 (AGUA)2 E RUA SENTIDO DUTOVIA 1	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	2 TB
+CAM-063	Sim	172.16.2.63	CAM-063 SPEED SUBESTAÇÃO II	Sim	Intelbras VIP 7425 SD IA FT	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	5 TB
+CAM-064	Sim	172.16.2.64	CAM-064 RUA SENTIDO PLATAFORMAS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	811 GB
+CAM-065	Sim	172.16.2.65	CAM-065  MOTOR DE BOMBAS DE INCENDIO	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	2 TB
+CAM-066	Sim	172.16.2.66	CAM-066 RUA SENTIDO DUTOVIA II E TANQUES	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	2 TB
+CAM-067	Sim	172.16.2.67	CAM-067 RUA SENTIDO DUTOVIA III E TANQUES	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	2 TB
+CAM-068	Sim	172.16.2.68	CAM-068 RUA SENTIDO DUTOVIA IV E TANQUES	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	1 TB
+CAM-069	Sim	172.16.2.69	CAM-069 RUA SENTIDO DUTOVIA V E TANQUES	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	2 TB
+CAM-070	Sim	172.16.2.70	CAM-070 RUA SENTIDO DUTOVIA V E TANQUES	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	2 TB
+CAM-071	Sim	172.16.2.71	CAM-071 RUA SENTIDO DUTOVIA VI E TANQUES	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	2 TB
+CAM-072	Sim	172.16.2.72	CAM-072 RUA SENTIDO DUTOVIA VI E TANQUES	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	877 GB
+CAM-073	Sim	172.16.2.73	CAM-073 DUTOVIA E RIO	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	1 TB
+CAM-074	Sim	172.16.2.74	CAM-074 SPEED DOME PERIMETRO RIO -TUBOVIA E TANQUES	Sim	Intelbras VIP 5232 SD IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	2 TB
+CAM-075	Sim	172.16.2.135	CAM-075 A/B PER (PROXIMO AO PORTÃO 3)	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	175 Dia(s) e 3,2 Hora(s)	Sim	9	1 TB
+CAM-076	Sim	172.16.2.76	CAM-076 CAIXA SEPARADORA	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	3 TB
+CAM-077	Sim	172.16.2.77	CAM-077 AREA DO TQ MUTANTE	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	3 TB
+CAM-078	Sim	172.16.2.78	CAM-078 PERIMETRO DO RIO E CERCA AGROPALMA	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-079	Sim	172.16.2.79	CAM-079 DUTOVIA ENTRADA	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	3 TB
+CAM-080	Sim	172.16.2.80	CAM-080 PERIMETRO AREA LAFANDEGADA SENTIDO RIO E TERRENO	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-081	Sim	172.16.2.81	CAM-081 DUTOVIA II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	3 TB
+CAM-082	Sim	172.16.2.82	CAM-082 DUTOVIA I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	2 TB
+CAM-083	Sim	172.16.2.83	CAM-083 DUTOVIA I PIER II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	3 TB
+CAM-084	Sim	172.16.2.84	CAM-084 SPEED DOME DO PIER II	Sim	Intelbras VIP 5232 SD IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	2 TB
+CAM-085	Sim	172.16.2.85	CAM-085 DUTOVIA II PIER II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	3 TB
+CAM-086	Sim	172.16.2.86	CAM-086 PIER II TERRA I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	1 TB
+CAM-087	Sim	172.16.2.87	CAM-087 PIER II TERRA II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	2 TB
+CAM-088	Sim	172.16.2.88	CAM-088 PIER II MAR I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	2 TB
+CAM-089	Sim	172.16.2.89	CAM-089 PIER II MAR II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	1 TB
+CAM-090	Sim	172.16.2.90	CAM-090 DUTOVIA I SENTINDO PIER I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	1 TB
+CAM-091	Sim	172.16.2.91	CAM-091 DUTOVIA II SENTINDO PIER I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	2 TB
+CAM-092	Sim	172.16.2.92	CAM-092 DUTOVIA III	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	2 TB
+CAM-093	Sim	172.16.2.93	CAM-093 DUTOVIA IV SENTINDO PIER I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	1 TB
+CAM-094	Sim	172.16.2.94	CAM-094 DUTOVIA V SENTINDO PIER I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	13	1 TB
+CAM-095	Sim	172.16.2.95	CAM-095 PIER I TERRA I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-096	Sim	172.16.2.96	CAM-096 PIER I TERRA I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	3 TB
+CAM-097	Sim	172.16.2.97	CAM-097 PIER I MAR II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	1 TB
+CAM-098	Sim	172.16.2.98	CAM-098 PIER I MAR II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	2 TB
+CAM-099	Sim	172.16.2.99	CAM-099 SPEED PIER I	Sim	Intelbras VIP 5232 SD IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	19	1 TB
+CAM-100	Sim	172.16.2.100	CAM-100 ACESSO DUTOVIA II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	1 TB
+CAM-101	Sim	172.16.2.101	CAM-101 PERIMETRO AREA ALFANDEGADA SENTIDO PLATAFORMA II E PIER DO TERRENO	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	10	1 TB
+CAM-102	Sim	172.16.2.102	CAM-102 SPEED DOME AREA ALFANDEGADA , PIER 1 E 2 LATERA DO TERRENO	Sim	Intelbras VIP 5232 SD IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	20	3 TB
+CAM-103	Sim	172.16.2.103	CAM-103 PERIMETRO DA AREA ALFANDEGADA E TERRENO I SENTIDO PIERS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-104	Sim	172.16.2.104	CAM-104 PERIMETRO DA AREA ALFANDEGADA E TERRENO I SENTIDO PIERS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-105	Sim	172.16.2.105	CAM-105 PERIMETRO DA AREA ALFANDEGADA E TERRENO II SENTIDO PORTARIA	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	3 TB
+CAM-106	Sim	172.16.2.106	CAM-106 PERIMETRO DA AREA ALFANDEGADA E TERRENO II SENTIDO PIERS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	3 TB
+CAM-107	Sim	172.16.2.107	CAM-107 PERIMETRO DA AREA ALFANDEGADA E GALPÃO I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-108	Sim	172.16.2.108	CAM-108 PERIMETRO DA AREA ALFANDEGADA E GALPÃO I E II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-109	Sim	172.16.2.109	CAM-109 RUA ENTRE GALPÃO I E II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	9	3 TB
+CAM-110	Sim	172.16.2.110	CAM-110 RUA ENTRE GALPÃO II E III	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-111	Sim	172.16.2.111	CAM-111 PERIMETRO AREA ALFANDEGADA ENTRE GALPÕES	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	3 TB
+CAM-112	Sim	172.16.2.112	CAM-112 PERIMETRO AREA ALFANDEGADA SENTIDO PLATAFORMAS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-113	Sim	172.16.2.113	CAM-113 PERIMETRO AREA ALFANDEGADA SENTIDO PLATAFORMAS E SAIDA	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	1 TB
+CAM-114	Sim	172.16.2.114	CAM-114 SPEED PLATAFORMAS	Sim	Intelbras VIP 7425 SD IA FT	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	6 TB
+CAM-115	Sim	172.16.2.115	CAM-115 CASA DE BOMBAS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	1 TB
+CAM-116	Sim	172.16.2.116	CAM-116 ILHA I LADO A	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	12	5 TB
+CAM-117	Sim	172.16.2.117	CAM-117 ILHA I LADO B	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	11	2 TB
+CAM-118	Sim	172.16.2.118	CAM-118 ILHA II LADO A	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	2 TB
+CAM-119	Sim	172.16.2.119	CAM-119 ILHA II LADO B	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	11	2 TB
+CAM-120	Sim	172.16.2.120	CAM-120 PLATAFORMA III LADO A	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-121	Sim	172.16.2.121	CAM-121 PLATAFORMA III LADO B	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	2 TB
+CAM-122	Sim	172.16.2.122	CAM-122 PREDIO MOTORISTAS E ESTACIONAMENTO DE CT	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	489 GB
+CAM-123	Sim	172.16.2.123	CAM-123 LADO DIREITO ESTACIONAMENTO ADM	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	3 TB
+CAM-124	Sim	172.16.2.124	CAM-124 CORREDOR PREDIO MOTORISTAS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	1 TB
+CAM-125	Sim	172.16.2.125	CAM-125 SALA DOS MOTORISTAS	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	1 TB
+CAM-126	Sim	172.16.2.126	CAM-126 ESTACIONAMENTO ADM	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-127	Sim	172.16.2.127	CAM-127 SAIDA AREA ALFADEGADA E ESTACIONAMENTO DE CT	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	15	3 TB
+CAM-128	Sim	172.16.2.128	CAM-128  ESTACIONAMENTO DE CT	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	16	3 TB
+CAM-129	Sim	172.16.2.129	CAM-129 ESTACIONAMENTO DE CT FRONTAL GALPÃO III	Sim	Hikvision DS-2CD3656G2-IZS	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-130	Sim	172.16.2.130	CAM-130 ESTACIONAMENTO DE CT FRONTAL GALPÃO II	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	16	3 TB
+CAM-131	Sim	172.16.2.131	CAM-131 ESTACIONAMENTO DE CT FRONTAL GALPÃO I	Sim	Intelbras VIP 5550 Z IA	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	180 Dia(s) e 23,7 Hora(s)	Sim	14	3 TB
+CAM-132	Sim	172.16.2.136	CAM-132 A/B PER (FUNDOS PORTÃO BOULEVARD)	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	175 Dia(s) e 2,7 Hora(s)	Sim	9	3 TB
+CAM-133	Sim	172.16.2.142	CAM-133 A/B - PER CORREDOR DA ESCADA	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	173 Dia(s) e 20,7 Hora(s)	Sim	10	3 TB
+CAM-135	Sim	172.16.2.144	CAM-135 A.F - CORREDOR 01	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	173 Dia(s) e 10,7 Hora(s)	Sim	9	1 TB
+CAM-136	Sim	172.16.2.139	CAM-136 A.F - CORREDOR 02 (TANCAGEM)	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	173 Dia(s) e 15,7 Hora(s)	Sim	10	815 GB
+CAM-137	Sim	172.16.2.140	CAM-137 A.F - CORREDOR 03	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	173 Dia(s) e 15,2 Hora(s)	Sim	9	1 TB
+CAM-138	Sim	172.16.2.148	CAM-138 A.F CORREDOR 04	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	173 Dia(s) e 11,2 Hora(s)	Sim	10	1 TB
+CAM-139	Sim	172.16.2.143	CAM-139 A.F - COMANDO DE VALVULAS	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	173 Dia(s) e 15,2 Hora(s)	Sim	10	3 TB
+CAM-143	Sim	172.16.2.137	CAM-143 A/B - PER (FUNDOS BOOLEVARD)	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	173 Dia(s) e 14,7 Hora(s)	Sim	9	4 TB
+CAM-205	Não	172.16.2.183	CAM-205 CONTRABORDO 1	Sim	Hikvision Generic Model	0 Hora(s), 8 Minuto(s) e 39 Segundo(s)	175 Dia(s) e 17,7 Hora(s)	Não	0	147 GB
+CAM-206	Não	172.16.2.146	CAM-206 CONTRABORDO 2	Sim	Hikvision Generic Model	0 Hora(s), 8 Minuto(s) e 39 Segundo(s)	175 Dia(s) e 17,7 Hora(s)	Não	0	107 GB
+CAM-207	Não	172.16.2.147	CAM-207 CONTRABORDO 3	Sim	Hikvision Generic Model	0 Hora(s), 8 Minuto(s) e 39 Segundo(s)	175 Dia(s) e 17,2 Hora(s)	Não	0	129 GB
+CAM-28	Sim	172.16.2.145	CAM-28 ACESSO AS CANCELAS DO ADM	Sim	Hikvision Generic Model	0 Hora(s), 0 Minuto(s) e 0 Segundo(s)	133 Dia(s) e 9,2 Hora(s)	Sim	10	1 TB
