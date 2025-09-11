@@ -60,11 +60,11 @@ except Exception as e:
 df["Em Funcionamento"] = df["Em Funcionamento"].str.lower().fillna("").str.strip()
 df["Gravando em Disco"] = df["Gravando em Disco"].str.lower().fillna("").str.strip()
 
-# Converter Tempo Inativo (H/M/S) -> dias (numérico) e -> horas (numérico)
+# Converter Tempo Inativo para dias
 def converter_tempo_para_dias_v2(tempo_str):
     try:
         horas = minutos = segundos = 0
-        partes = str(tempo_str).split(',')
+        partes = tempo_str.split(',')
         for parte in partes:
             parte = parte.strip()
             if "Hora" in parte:
@@ -74,15 +74,12 @@ def converter_tempo_para_dias_v2(tempo_str):
             elif "Segundo" in parte:
                 segundos = int(parte.split()[0])
         total_segundos = horas * 3600 + minutos * 60 + segundos
-        dias = total_segundos / 86400
-        return round(dias, 2)
+        dias = round(total_segundos / 86400, 2)
+        return dias
     except:
         return None
 
 df["Tempo Inativo (dias)"] = df["Tempo Inativo"].apply(converter_tempo_para_dias_v2)
-df["Tempo Inativo (horas)"] = df["Tempo Inativo (dias)"].apply(
-    lambda x: round(x * 24, 2) if pd.notna(x) else None
-)
 
 # Cálculos
 total_cameras = len(df)
@@ -140,15 +137,13 @@ elif opcao_filtro == "Somente OFF":
 if modelo_filtro != "Todos":
     df_filtrado = df_filtrado[df_filtrado["Modelo"] == modelo_filtro]
 
-# Exibe a tabela com 'h' sufixado (em horas)
+# Exibe a tabela com 'dias' sufixado
 df_filtrado_exibe = df_filtrado.copy()
-df_filtrado_exibe["Tempo Inativo (horas)"] = df_filtrado_exibe["Tempo Inativo (horas)"].apply(
-    lambda x: f"{x} h" if pd.notna(x) else ""
-)
+df_filtrado_exibe["Tempo Inativo (dias)"] = df_filtrado_exibe["Tempo Inativo (dias)"].apply(lambda x: f"{x} dias" if pd.notna(x) else "")
 
 st.dataframe(df_filtrado_exibe[[
     "Nome", "Em Funcionamento", "Endereço", "Descrição", "Ativado", "Modelo",
-    "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado", "Tempo Inativo (horas)"
+    "Dias de gravação", "Gravando em Disco", "FPS", "Disco Utilizado", "Tempo Inativo (dias)"
 ]], use_container_width=True)
 
 # Exportar para PDF (logo após a tabela)
@@ -160,19 +155,22 @@ if st.button("📄 Exportar Relatório em PDF"):
         # Logos
         c.drawImage(ImageReader(logo_esquerda), 30, 530, width=80, height=30, preserveAspectRatio=True)
         c.drawImage(ImageReader(logo_direita), 740, 530, width=80, height=30, preserveAspectRatio=True)
+
         # Título centralizado
         c.setFont("Helvetica-Bold", 16)
         c.drawCentredString(420, 520, "Relatório de Disponibilidade de Câmeras - Atem Belém")
-        # Data/hora (direita)
+
+        # >>>>>> ADIÇÃO: Data/Hora da exportação (centralizado) <<<<<<
         fuso = pytz.timezone("America/Belem")
         data_local = datetime.now(fuso).strftime("%d/%m/%Y %H:%M:%S")
-        c.setFont("Helvetica", 9)
-        c.drawRightString(820, 505, f"Gerado em: {data_local}")
+        c.setFont("Helvetica", 10)
+        c.drawCentredString(420, 505, f"Exportado em: {data_local}")
+        # -------------------------------------------------------------
 
         # Cabeçalho da tabela
         y_header = 480
         c.setFont("Helvetica-Bold", 8)
-        col_titles = ["Nome", "Funcionamento", "Descrição", "Modelo", "Gravando", "Dias Gravação", "Tempo Inativo (horas)"]
+        col_titles = ["Nome", "Funcionamento", "Descrição", "Modelo", "Gravando", "Dias Gravação", "Tempo Inativo (dias)"]
         col_widths = [120, 80, 130, 100, 60, 70, 90]
         for i, title in enumerate(col_titles):
             c.drawString(sum(col_widths[:i]) + 30, y_header, title)
@@ -189,11 +187,11 @@ if st.button("📄 Exportar Relatório em PDF"):
             str(row["Modelo"][:20]),
             row["Gravando em Disco"],
             str(row["Dias de gravação"]),
-            f"{row['Tempo Inativo (horas)']:.2f} h" if pd.notna(row['Tempo Inativo (horas)']) else ""
+            f"{row['Tempo Inativo (dias)']} dias" if pd.notna(row['Tempo Inativo (dias)']) else ""
         ]
         for i, val in enumerate(values):
             x_pos = sum(col_widths[:i]) + 30
-            align_right = (i == len(values) - 1)  # só a última (Tempo Inativo) à direita
+            align_right = i == len(values) - 1
             if align_right:
                 c.drawRightString(x_pos + col_widths[i] - 5, y, val)
             else:
@@ -221,9 +219,9 @@ st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
 st.subheader("📊 Dias de Gravação por Câmera")
 st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
 
-st.subheader("📝 Top 20 Câmeras com Maior Tempo Inativo (em horas)")
-top_inativas = df[["Nome", "Tempo Inativo (horas)"]].dropna().copy()
-top_inativas = top_inativas.sort_values(by="Tempo Inativo (horas)", ascending=False).head(20)
+st.subheader("📝 Top 20 Câmeras com Maior Tempo Inativo (em dias)")
+top_inativas = df[["Nome", "Tempo Inativo (dias)"]].dropna().copy()
+top_inativas = top_inativas.sort_values(by="Tempo Inativo (dias)", ascending=False).head(20)
 if not top_inativas.empty:
     st.bar_chart(top_inativas.set_index("Nome"))
 else:
