@@ -5,3 +5,4 @@
 2025-09-13 14:57:28 - ❌ Erro: arquivo de exportação não encontrado
 2025-09-13 14:57:40 - ❌ Erro durante automação: Command '['git', 'push']' returned non-zero exit status 128.
 2025-09-13 14:58:10 - ❌ Erro: arquivo de exportação não encontrado
+2025-09-13 14:58:25 - ❌ Erro: arquivo de exportação não encontrado
