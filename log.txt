@@ -6,3 +6,8 @@
 2025-09-13 14:57:40 - ❌ Erro durante automação: Command '['git', 'push']' returned non-zero exit status 128.
 2025-09-13 14:58:10 - ❌ Erro: arquivo de exportação não encontrado
 2025-09-13 14:58:25 - ❌ Erro: arquivo de exportação não encontrado
+2025-09-13 14:58:26 - ❌ Erro durante automação: Command '['git', 'push']' returned non-zero exit status 128.
+2025-09-13 18:02:20 - ❌ Erro durante automação: PyAutoGUI fail-safe triggered from mouse moving to a corner of the screen. To disable this fail-safe, set pyautogui.FAILSAFE to False. DISABLING FAIL-SAFE IS NOT RECOMMENDED.
+2025-09-14 04:03:08 - ❌ Erro durante automação: PyAutoGUI fail-safe triggered from mouse moving to a corner of the screen. To disable this fail-safe, set pyautogui.FAILSAFE to False. DISABLING FAIL-SAFE IS NOT RECOMMENDED.
+2025-09-14 06:00:10 - ❌ Erro durante automação: PyAutoGUI fail-safe triggered from mouse moving to a corner of the screen. To disable this fail-safe, set pyautogui.FAILSAFE to False. DISABLING FAIL-SAFE IS NOT RECOMMENDED.
+2025-09-14 06:51:57 - ❌ Erro durante automação: PyAutoGUI fail-safe triggered from mouse moving to a corner of the screen. To disable this fail-safe, set pyautogui.FAILSAFE to False. DISABLING FAIL-SAFE IS NOT RECOMMENDED.
