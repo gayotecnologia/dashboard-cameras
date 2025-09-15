@@ -16,7 +16,7 @@ def exportar_csv():
         time.sleep(2)
 
         # Selecionar o arquivo CSV já existente
-        pyautogui.click(334, 26089)
+        pyautogui.click(321, 265)
         time.sleep(1)
 
         # Clicar em "Salvar"
