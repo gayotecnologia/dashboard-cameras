@@ -102,7 +102,7 @@ def card(title, value, color):
     )
 
 # Cartões com layout responsivo
-st.markdown("## 📊 Visão Geral")
+st.markdown("Visão Geral")
 col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
 with col1:
     card("Total Câmeras", total_cameras, "#343a40")
@@ -118,7 +118,7 @@ with col5:
 
 # Filtro avançado
 st.markdown("---")
-st.subheader("📋 Tabela de Câmeras")
+st.subheader("Tabela de Câmeras")
 st.markdown("Use os filtros abaixo para refinar os resultados.")
 
 col_f1, col_f2 = st.columns(2)
@@ -213,13 +213,13 @@ st.markdown("---")
 st.subheader("🛆 Distribuição por Modelo")
 st.bar_chart(df["Modelo"].value_counts())
 
-st.subheader("📈 FPS por Câmera")
+st.subheader("FPS por Câmera")
 st.line_chart(df[["Nome", "FPS"]].set_index("Nome"))
 
-st.subheader("📊 Dias de Gravação por Câmera")
+st.subheader("Dias de Gravação por Câmera")
 st.bar_chart(df[["Nome", "Dias de gravação"]].set_index("Nome"))
 
-st.subheader("📝 Top 20 Câmeras com Maior Tempo Inativo (em dias)")
+st.subheader("Top 20 Câmeras com Maior Tempo Inativo (em dias)")
 top_inativas = df[["Nome", "Tempo Inativo (dias)"]].dropna().copy()
 top_inativas = top_inativas.sort_values(by="Tempo Inativo (dias)", ascending=False).head(20)
 if not top_inativas.empty:
